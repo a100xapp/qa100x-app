@@ -261,18 +261,25 @@
                         </div>
                     </div>
 
-                    {/* ENCABEZADO */}
+                    {/* ENCABEZADO RESTAURADO CON TODO EL DISEÑO PREMIUM */}
                     <header className="bg-[#0B1120]/90 backdrop-blur-md border-b border-slate-800 p-4 lg:p-6 flex flex-col lg:flex-row justify-between items-center z-40 sticky top-0">
+                        
+                        {/* IZQUIERDA: Títulos, Textos y Panel Macro */}
                         <div className="flex flex-col lg:items-start mb-4 lg:mb-0 w-full lg:w-2/3">
                             <div className="flex items-center space-x-4 mb-2">
                                 <span className="text-amber-500 text-4xl lg:text-5xl animate-pulse drop-shadow-[0_0_15px_rgba(245,158,11,0.4)]">⬢</span>
                                 <div>
                                     <h1 className="text-2xl lg:text-3xl font-black font-mono tracking-tighter text-white uppercase leading-none">Q.A100X Terminal</h1>
-                                    <h2 className="text-sm font-bold font-mono text-slate-400 uppercase mt-1">Análisis Institucional</h2>
+                                    <h2 className="text-sm lg:text-base font-bold font-mono text-slate-400 uppercase mt-1">Top 100 Cripto Monedas</h2>
                                 </div>
                             </div>
                             
-                            <div className="flex flex-col xl:flex-row items-center xl:items-start gap-4 mt-3 w-full">
+                            <p className="text-sm lg:text-base text-slate-300 font-medium tracking-wide max-w-3xl mt-3 mb-4 text-center lg:text-left">
+                                Procesamos millones de datos on-chain y flujos de liquidez macroeconómica para rankear el mercado. Estas son nuestras 10 mejores y peores proyecciones para la semana.
+                            </p>
+                            
+                            {/* Fechas y Dashboard Macro Restaurado */}
+                            <div className="flex flex-col xl:flex-row items-center xl:items-start gap-4 w-full">
                                 <div className="flex flex-wrap justify-center lg:justify-start gap-3">
                                     <div className="bg-[#020617] border border-slate-700 px-3 py-1.5 rounded flex items-center shadow-inner">
                                         <span className="text-cyan-500 text-xs mr-2 animate-pulse">●</span>
@@ -285,10 +292,27 @@
                                         <span className="text-[10px] font-black text-amber-400 font-mono uppercase">{datesStr.weekly}</span>
                                     </div>
                                 </div>
+
+                                <div className="flex flex-wrap justify-center lg:justify-start gap-3 xl:border-l xl:border-slate-800 xl:pl-4">
+                                    <div className="flex flex-col items-center xl:items-start">
+                                        <span className="text-[9px] text-slate-500 font-black font-mono tracking-widest">CAP. MERCADO GLOBAL</span>
+                                        <span className="text-sm text-white font-black font-mono tracking-tight">$2.48 Trillones</span>
+                                    </div>
+                                    <div className="hidden md:block w-px h-8 bg-slate-800 mx-1"></div>
+                                    <div className="flex flex-col items-center xl:items-start">
+                                        <span className="text-[9px] text-slate-500 font-black font-mono tracking-widest">FEAR & GREED INDEX</span>
+                                        <span className="text-sm text-green-400 font-black font-mono tracking-tight">72 (Codicia)</span>
+                                    </div>
+                                    <div className="hidden md:block w-px h-8 bg-slate-800 mx-1"></div>
+                                    <div className="flex flex-col items-center xl:items-start">
+                                        <span className="text-[9px] text-slate-500 font-black font-mono tracking-widest">DOMINANCIA BTC</span>
+                                        <span className="text-sm text-amber-500 font-black font-mono tracking-tight">54.8%</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
-                        {/* CONTROLES DE USUARIO */}
+                        {/* DERECHA: CONTROLES DE USUARIO */}
                         <div className="flex flex-col items-center lg:items-end mt-4 lg:mt-0">
                             {user ? (
                                 <div className="flex flex-col items-end">
