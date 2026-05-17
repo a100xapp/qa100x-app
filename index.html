@@ -4,10 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Q.A100X | Terminal Institucional</title>
+    
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React & ReactDOM -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel para compilar JSX -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- FIREBASE (Librerías de compatibilidad) -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
+
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Inter:wght@300;400;600;700;900&display=swap" rel="stylesheet">
     <style>
         body { background-color: #020617; color: #e2e8f0; font-family: 'Inter', sans-serif; margin: 0; }
@@ -15,58 +26,259 @@
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #020617; }
         ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        
+        /* Fondo para el Modal de Login */
+        .modal-backdrop { background-color: rgba(2, 6, 23, 0.85); backdrop-filter: blur(8px); }
     </style>
 </head>
 <body>
     <div id="root"></div>
-    <script type="text/babel">
-        const { useState, useEffect } = React;
-        function App() {
-            const [view, setView] = useState('terminal');
-            const [isVip, setIsVip] = useState(false);
-            const [time, setTime] = useState('');
 
+    <script type="text/babel">
+        // =======================================================================
+        // 1. CONFIGURACIÓN EXACTA DE FIREBASE (TUS LLAVES)
+        // =======================================================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyATUuq8jhfiFPwzlhvV6G1hk9u6fCtqS8w",
+            authDomain: "qa100x.firebaseapp.com",
+            projectId: "qa100x",
+            storageBucket: "qa100x.firebasestorage.app",
+            messagingSenderId: "1021886151118",
+            appId: "1:1021886151118:web:3039286e6760aa8cb9d39f",
+            measurementId: "G-KK8QRBXFHH"
+        };
+
+        // Inicializar Firebase
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const auth = firebase.auth();
+
+        // =======================================================================
+        // 2. LA APLICACIÓN REACT
+        // =======================================================================
+        const { useState, useEffect } = React;
+
+        function App() {
+            // Estados principales
+            const [user, setUser] = useState(null); 
+            const [time, setTime] = useState('');
+            const [showAuthModal, setShowAuthModal] = useState(false);
+            const [isLoginMode, setIsLoginMode] = useState(false);
+            
+            // Estados del formulario de registro
+            const [email, setEmail] = useState('');
+            const [password, setPassword] = useState('');
+            const [authError, setAuthError] = useState('');
+
+            // Mantener la hora actualizada y escuchar si el usuario inicia sesión
             useEffect(() => {
                 const t = setInterval(() => setTime(new Date().toLocaleTimeString('es-ES', {timeZone: 'UTC'})), 1000);
-                return () => clearInterval(t);
+                
+                const unsubscribe = auth.onAuthStateChanged(user => {
+                    setUser(user);
+                });
+
+                return () => {
+                    clearInterval(t);
+                    unsubscribe();
+                };
             }, []);
 
+            // Función para Crear Cuenta
+            const handleSignup = async (e) => {
+                e.preventDefault();
+                setAuthError('');
+                try {
+                    await auth.createUserWithEmailAndPassword(email, password);
+                    setShowAuthModal(false);
+                } catch (error) {
+                    setAuthError("Error: " + error.message);
+                }
+            };
+
+            // Función para Iniciar Sesión
+            const handleLogin = async (e) => {
+                e.preventDefault();
+                setAuthError('');
+                try {
+                    await auth.signInWithEmailAndPassword(email, password);
+                    setShowAuthModal(false);
+                } catch (error) {
+                    setAuthError("Correo o contraseña incorrectos.");
+                }
+            };
+
+            // Función para Cerrar Sesión
+            const handleLogout = () => {
+                auth.signOut();
+            };
+
             return (
-                <div className="min-h-screen flex flex-col">
-                    <header className="bg-[#0B1120] border-b border-slate-800 p-4 sticky top-0 z-50">
+                <div className="min-h-screen flex flex-col relative">
+                    
+                    {/* BARRA SUPERIOR */}
+                    <header className="bg-[#0B1120] border-b border-slate-800 p-4 sticky top-0 z-40">
                         <div className="max-w-7xl mx-auto flex justify-between items-center">
                             <div className="flex items-center space-x-3">
-                                <span className="text-amber-500 text-3xl">⬢</span>
-                                <h1 className="text-xl font-black font-mono text-white">Q.A100X.APP</h1>
+                                <span className="text-amber-500 text-3xl drop-shadow-[0_0_10px_rgba(245,158,11,0.4)]">⬢</span>
+                                <div>
+                                    <h1 className="text-xl font-black font-mono text-white tracking-tighter">Q.A100X.APP</h1>
+                                    <p className="text-[10px] text-slate-500 font-bold tracking-widest">{time} UTC</p>
+                                </div>
                             </div>
+                            
+                            {/* SECCIÓN DE USUARIO ARRIBA A LA DERECHA */}
                             <div className="flex items-center space-x-4">
-                                <span className="text-xs font-mono text-slate-500">{time} UTC</span>
-                                <button onClick={() => setIsVip(!isVip)} className="text-[10px] bg-slate-800 px-2 py-1 rounded text-slate-400">MODO: {isVip ? 'VIP' : 'GRATIS'}</button>
+                                {user ? (
+                                    <div className="flex items-center space-x-4">
+                                        <div className="hidden md:block text-right">
+                                            <p className="text-xs text-slate-400 font-mono">{user.email}</p>
+                                            <p className="text-[10px] text-emerald-400 font-bold">NIVEL 2: FREEMIUM</p>
+                                        </div>
+                                        <button onClick={handleLogout} className="text-xs border border-slate-700 text-slate-400 hover:text-white px-3 py-1.5 rounded transition-colors">Salir</button>
+                                    </div>
+                                ) : (
+                                    <div className="flex space-x-2">
+                                        <button onClick={() => { setIsLoginMode(true); setShowAuthModal(true); }} className="text-xs font-bold text-slate-300 hover:text-white px-3 py-2">Ingresar</button>
+                                        <button onClick={() => { setIsLoginMode(false); setShowAuthModal(true); }} className="text-xs font-black bg-amber-500 text-black px-4 py-2 rounded shadow-[0_0_15px_rgba(245,158,11,0.3)] hover:bg-amber-400 transition-colors">
+                                            REGISTRARSE GRATIS
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </header>
-                    <main className="flex-1 p-6 max-w-7xl mx-auto w-full">
-                        <div className="bg-[#0B1120] border border-slate-800 rounded-2xl p-8 text-center">
-                            <h2 className="text-3xl font-black mb-4">Bienvenido a la Terminal</h2>
-                            <p className="text-slate-400 mb-8 text-lg">Tu centro de inteligencia para activos 100X.</p>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="bg-[#020617] p-6 rounded-xl border border-slate-800">
-                                    <h3 className="text-emerald-400 font-bold mb-2 uppercase tracking-widest text-xs">Mejores Proyecciones</h3>
-                                    <p className="text-2xl font-black text-white">Bitcoin (BTC)</p>
-                                    <p className="text-emerald-500 font-mono">+18% Est.</p>
+
+                    {/* CONTENIDO DE LA TERMINAL */}
+                    <main className="flex-1 p-4 md:p-8 max-w-7xl mx-auto w-full">
+                        <div className="mb-8">
+                            <h2 className="text-3xl font-black text-white">Tablero de Inteligencia</h2>
+                            <p className="text-slate-400 mt-1">
+                                {user ? "Acceso Nivel 2. Analizando flujos institucionales." : "Crea tu cuenta gratis para desbloquear el Nivel 2."}
+                            </p>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            
+                            {/* CAJA 1: PÚBLICA (Nivel 1) */}
+                            <div className="bg-[#0B1120] border border-slate-800 rounded-2xl p-6">
+                                <span className="bg-emerald-500/10 text-emerald-400 text-xs font-black px-2 py-1 rounded border border-emerald-500/30 uppercase tracking-widest">NIVEL 1: Público</span>
+                                <h3 className="text-2xl font-black text-white mt-4">Bitcoin (BTC)</h3>
+                                <p className="text-slate-400 text-sm mt-2 mb-4">Soporte estructural impulsado por ETFs e instituciones.</p>
+                                <div className="bg-[#020617] p-4 rounded-xl border border-slate-800 flex justify-between items-center">
+                                    <span className="text-slate-500 font-bold text-sm">Proyección:</span>
+                                    <span className="text-emerald-400 font-mono font-black">+18.5%</span>
                                 </div>
-                                <div className="bg-[#020617] p-6 rounded-xl border border-slate-800">
-                                    <h3 className="text-red-400 font-bold mb-2 uppercase tracking-widest text-xs">Riesgo Institucional</h3>
-                                    <p className="text-2xl font-black text-white">Cardano (ADA)</p>
-                                    <p className="text-red-500 font-mono">-12% Est.</p>
+                            </div>
+
+                            {/* CAJA 2: FREEMIUM (Nivel 2 - Requiere Login) */}
+                            <div className="bg-[#0B1120] border border-slate-800 rounded-2xl p-6 relative overflow-hidden">
+                                {!user && (
+                                    <div className="absolute inset-0 z-10 modal-backdrop flex flex-col items-center justify-center">
+                                        <span className="text-4xl mb-3">🔒</span>
+                                        <p className="text-white font-bold mb-3">Contenido Nivel 2</p>
+                                        <button onClick={() => { setIsLoginMode(false); setShowAuthModal(true); }} className="bg-amber-500 text-black text-xs font-black px-4 py-2 rounded">
+                                            DESBLOQUEAR GRATIS
+                                        </button>
+                                    </div>
+                                )}
+                                
+                                <span className="bg-blue-500/10 text-blue-400 text-xs font-black px-2 py-1 rounded border border-blue-500/30 uppercase tracking-widest">NIVEL 2: Freemium</span>
+                                <h3 className="text-2xl font-black text-white mt-4">{user ? "Solana (SOL)" : "Activo Oculto"}</h3>
+                                <p className="text-slate-400 text-sm mt-2 mb-4">{user ? "Dominancia en adopción minorista y velocidad." : "Crea tu cuenta para revelar."}</p>
+                                <div className="bg-[#020617] p-4 rounded-xl border border-slate-800 flex justify-between items-center">
+                                    <span className="text-slate-500 font-bold text-sm">Proyección:</span>
+                                    <span className="text-emerald-400 font-mono font-black">{user ? "+22.4%" : "??.?"}</span>
+                                </div>
+                            </div>
+                            
+                            {/* CAJA 3: VIP (Nivel 3 - Bloqueada por ahora) */}
+                            <div className="bg-[#0B1120] border border-amber-500/30 rounded-2xl p-6 relative overflow-hidden md:col-span-2 shadow-[0_0_30px_rgba(245,158,11,0.05)]">
+                                <div className="absolute inset-0 z-10 modal-backdrop flex flex-col items-center justify-center">
+                                    <span className="text-amber-500 text-4xl mb-3">💎</span>
+                                    <p className="text-amber-500 font-bold mb-1">Gema Institucional (Nivel 3)</p>
+                                    <p className="text-slate-400 text-xs mb-4">Exclusivo para miembros VIP</p>
+                                    <button className="bg-gradient-to-r from-amber-500 to-orange-500 text-black text-sm font-black px-6 py-2 rounded-full uppercase tracking-wider hover:scale-105 transition-transform">
+                                        HACER UPGRADE VIP
+                                    </button>
+                                    <p className="text-[10px] text-slate-500 mt-2">Próximamente: Integración con Stripe</p>
+                                </div>
+                                
+                                <span className="bg-amber-500/10 text-amber-500 text-xs font-black px-2 py-1 rounded border border-amber-500/30 uppercase tracking-widest">NIVEL 3: VIP</span>
+                                <h3 className="text-2xl font-black text-white mt-4">Activo Oculto 100X</h3>
+                                <p className="text-slate-400 text-sm mt-2 mb-4">Tesis confidencial revelada solo a suscriptores VIP.</p>
+                                <div className="bg-[#020617] p-4 rounded-xl border border-slate-800 flex justify-between items-center">
+                                    <span className="text-slate-500 font-bold text-sm">Proyección:</span>
+                                    <span className="text-amber-500 font-mono font-black">+350.0%</span>
+                                </div>
+                            </div>
+
+                        </div>
+                    </main>
+
+                    {/* =======================================================================
+                        VENTANA EMERGENTE DE REGISTRO / INICIO DE SESIÓN
+                    ======================================================================= */}
+                    {showAuthModal && (
+                        <div className="fixed inset-0 z-50 modal-backdrop flex items-center justify-center p-4">
+                            <div className="bg-[#0B1120] border border-slate-700 w-full max-w-md rounded-2xl p-8 relative shadow-2xl">
+                                <button onClick={() => setShowAuthModal(false)} className="absolute top-4 right-4 text-slate-500 hover:text-white text-xl">✕</button>
+                                
+                                <div className="text-center mb-6">
+                                    <span className="text-amber-500 text-4xl block mb-2">⬢</span>
+                                    <h2 className="text-2xl font-black text-white uppercase">{isLoginMode ? 'Iniciar Sesión' : 'Crear Cuenta Gratis'}</h2>
+                                    <p className="text-slate-400 text-sm mt-1">{isLoginMode ? 'Accede a tu terminal' : 'Desbloquea el Nivel 2 instantáneamente'}</p>
+                                </div>
+
+                                {authError && (
+                                    <div className="bg-red-500/10 border border-red-500/30 text-red-500 text-xs font-bold p-3 rounded mb-4 text-center">
+                                        {authError}
+                                    </div>
+                                )}
+
+                                <form onSubmit={isLoginMode ? handleLogin : handleSignup} className="space-y-4">
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-500 mb-1 uppercase">Correo Electrónico</label>
+                                        <input 
+                                            type="email" 
+                                            value={email}
+                                            onChange={(e) => setEmail(e.target.value)}
+                                            required
+                                            className="w-full bg-[#020617] border border-slate-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:border-amber-500 transition-colors"
+                                            placeholder="tu@correo.com"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-500 mb-1 uppercase">Contraseña</label>
+                                        <input 
+                                            type="password" 
+                                            value={password}
+                                            onChange={(e) => setPassword(e.target.value)}
+                                            required
+                                            className="w-full bg-[#020617] border border-slate-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:border-amber-500 transition-colors"
+                                            placeholder="••••••••"
+                                        />
+                                    </div>
+                                    <button type="submit" className="w-full bg-amber-500 hover:bg-amber-400 text-black font-black py-3 rounded-lg uppercase tracking-wider transition-colors mt-2">
+                                        {isLoginMode ? 'Entrar a la Terminal' : 'Registrarse y Desbloquear'}
+                                    </button>
+                                </form>
+
+                                <div className="mt-6 text-center border-t border-slate-800 pt-4">
+                                    <button onClick={() => { setIsLoginMode(!isLoginMode); setAuthError(''); }} className="text-sm text-slate-400 hover:text-white transition-colors">
+                                        {isLoginMode ? '¿No tienes cuenta? Regístrate gratis' : '¿Ya tienes cuenta? Inicia sesión'}
+                                    </button>
                                 </div>
                             </div>
                         </div>
-                    </main>
+                    )}
                 </div>
             );
         }
-        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
     </script>
 </body>
 </html>
