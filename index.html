@@ -96,8 +96,8 @@
             
             // Estados Autenticación
             const [user, setUser] = useState(null); 
-            const [isSimulatedVip, setIsSimulatedVip] = useState(false); // Para desarrollo
-            const currentTier = user ? (isSimulatedVip ? 3 : 2) : 1; // Nivel 1 (Invitado), 2 (Gratis), 3 (VIP)
+            // Control de Nivel: 1 (Visitante), 2 (Registrado Gratis), 3 (VIP - Controlado por Admin en el futuro)
+            const currentTier = user ? (user.displayName === 'VIP' ? 3 : 2) : 1; 
             
             // Estados UI
             const [activeTab, setActiveTab] = useState('alpha');
@@ -112,16 +112,19 @@
             const [isLoginMode, setIsLoginMode] = useState(false);
             const [showVipModal, setShowVipModal] = useState(false);
             
-            // Formulario Auth
+            // Formulario Auth Ampliado
+            const [name, setName] = useState('');
             const [email, setEmail] = useState('');
             const [password, setPassword] = useState('');
+            const [phone, setPhone] = useState('');
+            const [countryCode, setCountryCode] = useState('+1');
             const [authError, setAuthError] = useState('');
 
             // Refs para Gráficos
             const chartRef = useRef(null);
             const chartInstance = useRef(null);
 
-            // Iniciar Reloj, Fechas y Ticker
+            // Iniciar Reloj, Fechas, Ticker y Geolocalización (Auto-país)
             useEffect(() => {
                 // Reloj
                 const t = setInterval(() => setTimeStr(new Date().toLocaleTimeString('es-ES', {timeZone: 'UTC'})), 1000);
@@ -140,6 +143,16 @@
                     .then(res => res.json())
                     .then(data => setTickerData(data))
                     .catch(err => console.error("Error Ticker", err));
+
+                // Geolocalización Automática (IP API)
+                fetch('https://ipapi.co/json/')
+                    .then(res => res.json())
+                    .then(data => {
+                        if(data && data.country_calling_code) {
+                            setCountryCode(data.country_calling_code);
+                        }
+                    })
+                    .catch(err => console.log('Error detectando país', err));
 
                 // Firebase Auth Listener
                 const unsubscribe = auth.onAuthStateChanged(usr => {
@@ -226,23 +239,45 @@
                 return `$${Number(p).toLocaleString('en-US', {minimumFractionDigits: (p<1?4:2), maximumFractionDigits:(p<1?4:2)})}`;
             };
 
-            // Funciones de Firebase
+            // Funciones de Firebase (Login / Registro)
             const handleAuth = async (e) => {
                 e.preventDefault();
                 setAuthError('');
                 try {
-                    if (isLoginMode) await auth.signInWithEmailAndPassword(email, password);
-                    else await auth.createUserWithEmailAndPassword(email, password);
+                    if (isLoginMode) {
+                        await auth.signInWithEmailAndPassword(email, password);
+                    } else {
+                        // Registro de usuario nuevo
+                        const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+                        // Opcional: Guardamos el nombre en su perfil de Firebase Auth
+                        await userCredential.user.updateProfile({
+                            displayName: name
+                        });
+                        // El teléfono y código de país se capturan aquí para uso futuro (Fase 2 Firestore)
+                    }
+                    setShowAuthModal(false);
                 } catch (error) {
                     setAuthError(isLoginMode ? "Credenciales inválidas." : error.message);
                 }
             };
-            const handleLogout = () => { auth.signOut(); setIsSimulatedVip(false); };
 
-            // Handler para pago con Stripe
+            const handleLogout = () => { auth.signOut(); };
+
+            // Handler para pago con Stripe en POPUP profesional
             const handleStripePayment = () => {
                 if (STRIPE_PAYMENT_LINK) {
-                    window.location.href = STRIPE_PAYMENT_LINK;
+                    // Dimensiones del Popup
+                    const w = 500;
+                    const h = 750;
+                    const left = (window.screen.width / 2) - (w / 2);
+                    const top = (window.screen.height / 2) - (h / 2);
+                    
+                    // Abrir en ventana modal/popup
+                    window.open(
+                        STRIPE_PAYMENT_LINK, 
+                        'StripeCheckout', 
+                        `width=${w},height=${h},top=${top},left=${left},toolbar=no,location=no,status=no,menubar=no,scrollbars=yes,resizable=yes`
+                    );
                 } else {
                     alert("Aviso: El enlace de Stripe aún no ha sido configurado por el administrador.");
                 }
@@ -337,7 +372,6 @@
                                     <div className="flex space-x-3 items-center">
                                         <span className="text-xs text-slate-400 font-mono">{user.email}</span>
                                         <button onClick={handleLogout} className="text-xs text-slate-500 hover:text-white underline">Salir</button>
-                                        {currentTier === 2 && <button onClick={()=>setIsSimulatedVip(true)} className="text-[10px] bg-amber-500 text-black px-2 py-1 rounded font-bold">Simular VIP</button>}
                                     </div>
                                 </div>
                             ) : (
@@ -490,15 +524,17 @@
                         </main>
                     </div>
 
-                    {/* MODAL AUTH (FIREBASE LOGIN/SIGNUP) */}
+                    {/* =======================================================================
+                        MODAL AUTH MEJORADO (FIREBASE LOGIN / SIGNUP)
+                    ======================================================================= */}
                     {showAuthModal && (
                         <div className="fixed inset-0 z-50 modal-backdrop flex items-center justify-center p-4">
-                            <div className="bg-[#0B1120] border border-amber-500/30 w-full max-w-md rounded-3xl p-8 relative shadow-[0_0_40px_rgba(245,158,11,0.15)] overflow-hidden">
+                            <div className="bg-[#0B1120] border border-amber-500/30 w-full max-w-md rounded-3xl p-8 relative shadow-[0_0_40px_rgba(245,158,11,0.15)] overflow-hidden max-h-[95vh] overflow-y-auto">
                                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-amber-500 to-transparent"></div>
                                 <button onClick={() => setShowAuthModal(false)} className="absolute top-5 right-5 text-slate-500 hover:text-white text-xl">✕</button>
                                 
-                                <div className="text-center mb-8 mt-2">
-                                    <span className="text-amber-500 text-5xl block mb-4 drop-shadow-[0_0_15px_rgba(245,158,11,0.5)]">⬢</span>
+                                <div className="text-center mb-6 mt-2">
+                                    <span className="text-amber-500 text-5xl block mb-3 drop-shadow-[0_0_15px_rgba(245,158,11,0.5)]">⬢</span>
                                     <h2 className="text-2xl font-black text-white uppercase tracking-tighter">{isLoginMode ? 'Conexión Segura' : 'Desbloquea el Nivel 2'}</h2>
                                     <p className="text-slate-400 text-sm mt-2 font-medium">{isLoginMode ? 'Ingresa tus credenciales para acceder a la terminal.' : 'Crea tu cuenta gratis hoy para revelar 3 activos adicionales.'}</p>
                                 </div>
@@ -506,12 +542,34 @@
                                 {authError && <div className="bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-bold p-3 rounded mb-4 text-center">{authError}</div>}
 
                                 <form onSubmit={handleAuth} className="space-y-4">
+                                    
+                                    {/* Campos adicionales SOLO para registro */}
+                                    {!isLoginMode && (
+                                        <>
+                                            <div>
+                                                <label className="block text-xs font-bold text-slate-500 mb-1 uppercase">Nombre Completo</label>
+                                                <input type="text" value={name} onChange={e => setName(e.target.value)} required className="w-full bg-[#020617] border border-slate-700 text-white rounded-xl px-4 py-3 focus:outline-none focus:border-amber-500 transition-colors shadow-inner" placeholder="Ej. Juan Pérez" />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-bold text-slate-500 mb-1 uppercase">Teléfono Móvil</label>
+                                                <div className="flex">
+                                                    <input type="text" value={countryCode} onChange={e => setCountryCode(e.target.value)} required className="w-20 bg-[#020617] border border-slate-700 text-amber-500 font-bold rounded-l-xl px-2 py-3 focus:outline-none text-center font-mono border-r-0" />
+                                                    <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} required className="flex-1 bg-[#020617] border border-slate-700 text-white rounded-r-xl px-4 py-3 focus:outline-none focus:border-amber-500 transition-colors shadow-inner" placeholder="1234567890" />
+                                                </div>
+                                            </div>
+                                        </>
+                                    )}
+
+                                    {/* Campos comunes (Email y Password) */}
                                     <div>
-                                        <input type="email" value={email} onChange={e => setEmail(e.target.value)} required className="w-full bg-[#020617] border border-slate-700 text-white rounded-xl px-4 py-4 focus:outline-none focus:border-amber-500 transition-colors shadow-inner" placeholder="Correo electrónico institucional" />
+                                        <label className="block text-xs font-bold text-slate-500 mb-1 uppercase">Correo Electrónico</label>
+                                        <input type="email" value={email} onChange={e => setEmail(e.target.value)} required className="w-full bg-[#020617] border border-slate-700 text-white rounded-xl px-4 py-3 focus:outline-none focus:border-amber-500 transition-colors shadow-inner" placeholder="tu@correo.com" />
                                     </div>
                                     <div>
-                                        <input type="password" value={password} onChange={e => setPassword(e.target.value)} required className="w-full bg-[#020617] border border-slate-700 text-white rounded-xl px-4 py-4 focus:outline-none focus:border-amber-500 transition-colors shadow-inner" placeholder="Contraseña segura" />
+                                        <label className="block text-xs font-bold text-slate-500 mb-1 uppercase">Contraseña</label>
+                                        <input type="password" value={password} onChange={e => setPassword(e.target.value)} required className="w-full bg-[#020617] border border-slate-700 text-white rounded-xl px-4 py-3 focus:outline-none focus:border-amber-500 transition-colors shadow-inner" placeholder="••••••••" />
                                     </div>
+                                    
                                     <button type="submit" className="w-full bg-amber-500 hover:bg-amber-400 text-black font-black text-lg py-4 rounded-xl uppercase tracking-widest transition-colors mt-4 shadow-[0_0_20px_rgba(245,158,11,0.2)]">
                                         {isLoginMode ? 'INGRESAR' : 'REGISTRARSE GRATIS'}
                                     </button>
