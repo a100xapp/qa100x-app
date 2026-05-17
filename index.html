@@ -89,6 +89,11 @@
         const { useState, useEffect, useRef } = React;
 
         function App() {
+            // =======================================================================
+            // ENLACE DE PAGO STRIPE
+            // =======================================================================
+            const STRIPE_PAYMENT_LINK = ""; // <-- PEGA TU LINK DE STRIPE ENTRE LAS COMILLAS
+            
             // Estados Autenticación
             const [user, setUser] = useState(null); 
             const [isSimulatedVip, setIsSimulatedVip] = useState(false); // Para desarrollo
@@ -233,6 +238,15 @@
                 }
             };
             const handleLogout = () => { auth.signOut(); setIsSimulatedVip(false); };
+
+            // Handler para pago con Stripe
+            const handleStripePayment = () => {
+                if (STRIPE_PAYMENT_LINK) {
+                    window.location.href = STRIPE_PAYMENT_LINK;
+                } else {
+                    alert("Aviso: El enlace de Stripe aún no ha sido configurado por el administrador.");
+                }
+            };
 
             const selectedAsset = cryptoData[selectedAssetKey];
 
@@ -523,10 +537,10 @@
                                 <h2 className="text-3xl font-black text-white uppercase tracking-tighter mb-4">Acceso VIP Restringido</h2>
                                 <p className="text-slate-300 text-base mb-8 leading-relaxed">Estás intentando acceder a una Gema Institucional Oculta. Para ver todos los análisis, alertas y proyecciones de Wall Street, necesitas la membresía VIP.</p>
                                 
-                                <button className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-black font-black text-xl py-4 rounded-xl hover:scale-105 transition-transform shadow-[0_0_25px_rgba(245,158,11,0.4)] uppercase tracking-wider">
+                                <button onClick={handleStripePayment} className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-black font-black text-xl py-4 rounded-xl hover:scale-105 transition-transform shadow-[0_0_25px_rgba(245,158,11,0.4)] uppercase tracking-wider">
                                     OBTENER ACCESO VIP AHORA
                                 </button>
-                                <p className="text-xs text-slate-500 mt-4 font-mono">Integración con pasarela de pago (Stripe) en proceso...</p>
+                                <p className="text-xs text-slate-500 mt-4 font-mono">Procesado de forma segura por Stripe</p>
                             </div>
                         </div>
                     )}
