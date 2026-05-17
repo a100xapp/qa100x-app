@@ -275,7 +275,7 @@
                             </div>
                             
                             <p className="text-sm lg:text-base text-slate-300 font-medium tracking-wide max-w-3xl mt-3 mb-4 text-center lg:text-left">
-                                Procesamos millones de datos on-chain y flujos de liquidez macroeconómica para rankear el mercado. Estas son nuestras 10 mejores y peores proyecciones para la semana.
+                                Procesamos millones de datos on-chain, flujos de liquidez macroeconómico, análisis fundamental para rankear las mejores oportunidades tanto en largo como en corto del mercado.
                             </p>
                             
                             {/* Fechas y Dashboard Macro Restaurado */}
@@ -312,7 +312,7 @@
                             </div>
                         </div>
 
-                        {/* DERECHA: CONTROLES DE USUARIO */}
+                        {/* DERECHA: CONTROLES DE USUARIO E INVERSORES */}
                         <div className="flex flex-col items-center lg:items-end mt-4 lg:mt-0">
                             {user ? (
                                 <div className="flex flex-col items-end">
@@ -334,6 +334,15 @@
                                     <button onClick={() => { setIsLoginMode(true); setShowAuthModal(true); }} className="text-xs text-slate-400 hover:text-white underline">Ya tengo cuenta (Entrar)</button>
                                 </div>
                             )}
+
+                            {/* INDICADOR INVERSORES EN LÍNEA */}
+                            <div className="flex items-center mt-4 space-x-2">
+                                <span className="relative flex h-2 w-2">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                                </span>
+                                <p className="text-[10px] text-slate-400 font-bold font-mono">1,204 INVERSORES EN LÍNEA</p>
+                            </div>
                         </div>
                     </header>
 
