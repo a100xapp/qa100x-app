@@ -15,20 +15,36 @@
     <!-- Babel para compilar JSX -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-    <!-- FIREBASE (Librerías de compatibilidad) -->
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- FIREBASE -->
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
 
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Inter:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+    <!-- Fuentes Profesionales -->
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+    
     <style>
-        body { background-color: #020617; color: #e2e8f0; font-family: 'Inter', sans-serif; margin: 0; }
+        body, html { background-color: #020617; color: #e2e8f0; font-family: 'Inter', sans-serif; margin: 0; padding: 0; min-height: 100vh; overflow-x: hidden; }
         .font-mono { font-family: 'JetBrains Mono', monospace; }
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #020617; }
         ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
         
-        /* Fondo para el Modal de Login */
+        .glow-box { box-shadow: 0 0 20px rgba(245, 158, 11, 0.05); }
         .modal-backdrop { background-color: rgba(2, 6, 23, 0.85); backdrop-filter: blur(8px); }
+
+        /* Ticker Tape Animations */
+        .ticker-wrap { width: 100%; overflow: hidden; background-color: #000000; white-space: nowrap; border-bottom: 1px solid #1e293b; position: relative; z-index: 50; display: flex; align-items: center; }
+        .ticker-label { background-color: #000000; color: #f59e0b; padding: 0.5rem 1rem; font-weight: 900; font-size: 0.75rem; letter-spacing: 0.1em; position: absolute; left: 0; z-index: 10; box-shadow: 15px 0 15px -5px rgba(0,0,0,1); }
+        .ticker-content { display: inline-block; animation: marquee 35s linear infinite; padding-left: 120px; }
+        .ticker-item { display: inline-block; padding: 0 2rem; font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; }
+        @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+        
+        .chart-container { position: relative; width: 100%; height: 350px; }
+        @media (min-width: 1024px) { .chart-container { height: 400px; } }
     </style>
 </head>
 <body>
@@ -36,7 +52,7 @@
 
     <script type="text/babel">
         // =======================================================================
-        // 1. CONFIGURACIÓN EXACTA DE FIREBASE (TUS LLAVES)
+        // 1. CONFIGURACIÓN FIREBASE (LLAVES DEL CLIENTE)
         // =======================================================================
         const firebaseConfig = {
             apiKey: "AIzaSyATUuq8jhfiFPwzlhvV6G1hk9u6fCtqS8w",
@@ -48,228 +64,436 @@
             measurementId: "G-KK8QRBXFHH"
         };
 
-        // Inicializar Firebase
         if (!firebase.apps.length) {
             firebase.initializeApp(firebaseConfig);
         }
         const auth = firebase.auth();
 
         // =======================================================================
-        // 2. LA APLICACIÓN REACT
+        // 2. BASE DE DATOS LOCAL (CONTENIDO DE LA TERMINAL)
         // =======================================================================
-        const { useState, useEffect } = React;
+        const cryptoData = {
+            sol: { id: 'sol', list: 'alpha', tierReq: 1, symbol: 'SOL', name: 'Solana', narrative: 'L1 High-Throughput / Monolithic', verdict: 'Strong Buy', apiSymbol: 'SOLUSDT', projMuls: [1.15, 1.54, 2.45], thesis: 'Dominancia absoluta. Es la red elegida por corporaciones para micropagos debido a su velocidad sin latencia.', tech: ['Actualización Firedancer a punto de procesar 1M TPS.', 'Composabilidad sincrónica perfecta.', '100% uptime en los últimos 12 meses.'], onchain: ['Flujo neto masivo de salida de Ethereum hacia Solana.', 'DEX procesan más volumen que Uniswap L1.', 'Billeteras institucionales acumulando.'], macro: ['ETFs globales comenzarán a añadir Solana.', 'Entorno de tasas bajas favorece adopción.', 'Liquidez entrando al ecosistema tradicional.'], tokenomics: ['Inflación reduciéndose.', 'Mecanismo de quema offsetea emisión.', 'Bajo riesgo de venta de equipo.'], security: ['Auditorías múltiples completadas.', 'QUIC mitigó ataques botnets.', 'Descentralización en aumento.'], adoption: ['Integración con pasarelas TradFi.', 'Elegida base para DePIN.', 'Ecosistema NFT fuerte.'], projections: { short: 'Catalizadores inminentes por airdrops.', mid: 'Impacto de adopción de stablecoins.', long: 'Captura de mercado hacia TradFi.' } },
+            btc: { id: 'btc', list: 'alpha', tierReq: 1, symbol: 'BTC', name: 'Bitcoin', narrative: 'Store of Value / Macro Asset', verdict: 'Hold', apiSymbol: 'BTCUSDT', projMuls: [1.08, 1.25, 1.8], thesis: 'Refugio algorítmico primario. Activo maduro con flujos institucionales vía ETFs.', tech: ['Hashrate en máximos históricos.', 'Desarrollo en L2 mejorando utilidad.', 'Halving ejecutado con éxito.'], onchain: ['ETFs absorbiendo más emisión.', 'Carteras antiguas mantienen posiciones.', 'Capitulación de mineros terminada.'], macro: ['Expansión de liquidez global presiona al alza.', 'Bancos centrales acumulando.', 'Incertidumbre fortalece oro digital.'], tokenomics: ['Inflación reducida a menos de 1%.', 'Suministro fijo de 21 millones.', 'Pérdida histórica aumenta escasez.'], security: ['Imposibilidad de ataque 51%.', 'Código base ultra conservador.', 'Red global imparable.'], adoption: ['Wall Street ofreciendo ETFs.', 'Adopción soberana.', 'Colateral premier TradFi.'], projections: { short: 'Consolidación en rango macro.', mid: 'Ruptura de máximos por expansión M2.', long: 'Objetivo de ciclo cumpliendo Ley de Potencias.' } },
+            rndr: { id: 'rndr', list: 'alpha', tierReq: 2, symbol: 'RENDER', name: 'Render', narrative: 'DePIN / Computación Descentralizada IA', verdict: 'Strong Buy', apiSymbol: 'RENDERUSDT', projMuls: [1.25, 1.8, 3.2], thesis: 'Monopolio en GPU rendering. La IA demanda potencia y Render es la infraestructura indispensable.', tech: ['Migración a Solana para microtransacciones.', 'Nodos adaptados para Machine Learning.', 'Arquitectura altamente escalable.'], onchain: ['Crecimiento del 340% interanual en red.', 'Ballenas de Silicon Valley acumulando.', 'Holders a largo plazo no venden.'], macro: ['Boom global de IA dispara demanda.', 'Escasez de chips Nvidia.', 'Rotación hacia infraestructura física.'], tokenomics: ['Modelo Burn-Mint deflacionario.', 'Uso corporativo quema supply.', 'Sin presión de venta de VCs.'], security: ['Verificación de nodos previene código malicioso.', 'Migración redujo riesgos de exploits.', 'Castigo para operadores ineficientes.'], adoption: ['Uso por estudios de Hollywood.', 'Alianzas con gigantes de hardware.', 'Integración en IA espacial AR/VR.'], projections: { short: 'Ruptura impulsada por noticias tech.', mid: 'Shock de oferta BME.', long: 'Captura del sector render global.' } },
+            ondo: { id: 'ondo', list: 'alpha', tierReq: 2, symbol: 'ONDO', name: 'Ondo Finance', narrative: 'Real World Assets (RWA)', verdict: 'Buy', apiSymbol: 'ONDOUSDT', projMuls: [1.18, 1.6, 2.8], thesis: 'Puente regulatorio más seguro entre bonos del Tesoro EE.UU. y DeFi. Liquidez institucional garantizada.', tech: ['Smart contracts auditados nivel institucional.', 'Estructura multi-firma y multi-custodia.', 'Interoperabilidad nativa en Ethereum y Polygon.'], onchain: ['Crecimiento exponencial de TVL en OUSG.', 'Profundidad de mercado sustancial en DEX.', 'Fondos de inversión inyectando capital constante.'], macro: ['Tasas de interés globales impulsan yield estable.', 'Bancos exploran tokenización a través de Ondo.', 'Regulación clara beneficia a emisores de RWA.'], tokenomics: ['Presión de venta absorbida por OTC spot.', 'Distribución de tokens orientada a gobernanza.', 'Captura de valor real a través de fees.'], security: ['Custodia de activos con entidades reguladas EE.UU.', 'Transparencia de reservas on-chain en tiempo real.', 'Cero exposición a préstamos sin garantía.'], adoption: ['Integración masiva en protocolos de lending.', 'Tesoros de DAOs usando Ondo para proteger liquidez.', 'Asociaciones con Layer 1s para liquidez nativa.'], projections: { short: 'Rechazo exitoso de soporte VWAP.', mid: 'Rotación hacia yields tokenizados atrae capital.', long: 'Tokenización masiva del mercado de bonos global.' } },
+            tao: { id: 'tao', list: 'alpha', tierReq: 3, symbol: 'TAO', name: 'Bittensor', narrative: 'AI Descentralizada', verdict: 'Strong Buy', apiSymbol: 'TAOUSDT', projMuls: [1.12, 1.6, 3.5], thesis: 'El protocolo Yuma Consensus crea un mercado libre de IA que rivaliza con gigantes de Silicon Valley.', tech: ['Consenso de inteligencia evaluando subredes.', 'Recompensa algoritmos eficientes.', 'Crecimiento de subredes especializadas.'], onchain: ['Oferta flotante extremadamente baja.', 'Mineros haciendo staking.', 'Acumulación institucional en secundario.'], macro: ['Valuaciones millonarias en IA.', 'Inversores buscan alternativas open-source.', 'Sector IA resiliente a caídas macro.'], tokenomics: ['Límite matemático de 21 millones.', 'Emisión justa sin pre-minado.', 'Recompensas divididas.'], security: ['Mecanismos robustos contra gaming.', 'Descentralización global.', 'Auditorías constantes.'], adoption: ['Desarrolladores migrando de Web2.', 'Fondos especializados comprando.', 'Integración en apps de consumidor.'], projections: { short: 'Test de resistencias.', mid: 'Adopción de subredes para análisis predictivo.', long: 'Especulación masiva sobre la AGI.' } },
+            ada: { id: 'ada', list: 'omega', tierReq: 1, symbol: 'ADA', name: 'Cardano', narrative: 'Ghost Chain / Legacy L1', verdict: 'Strong Sell', apiSymbol: 'ADAUSDT', projMuls: [0.95, 0.8, 0.5], thesis: 'Blockchain fantasma. Alta capitalización sostenida por marketing, sin uso real, ni TVL, ni adopción.', tech: ['Modelo eUTXO ineficiente.', 'Lentitud de desarrollo extrema.', 'Lenguaje Plutus aleja desarrolladores.'], onchain: ['Genera menos de $15,000 al día en comisiones.', 'TVL minúsculo frente a su valoración.', 'Salida constante de capital a ecosistemas modernos.'], macro: ['Fondos institucionales sin exposición a ADA.', 'Narrativa ignorada por el mercado.', 'Falta total de catalizadores macroeconómicos.'], tokenomics: ['Alta dilución por recompensas.', 'Ratio MCAP/TVL astronómico.', 'Inflación continua de oferta.'], security: ['Segura, pero falta de uso la hace irrelevante.', 'Baja densidad de nodos corporativos.', 'Riesgo de abandono.'], adoption: ['Cero integraciones con protocolos DeFi top.', 'Nula tracción en NFT o Gaming.', 'Usuarios son especuladores, no usuarios reales.'], projections: { short: 'Pérdida de soporte clave.', mid: 'Cascada de ventas retail.', long: 'Degradación lenta hacia la irrelevancia.' } },
+            wld: { id: 'wld', list: 'omega', tierReq: 2, symbol: 'WLD', name: 'Worldcoin', narrative: 'Trampa Liquidez (High FDV)', verdict: 'Strong Sell', apiSymbol: 'WLDUSDT', projMuls: [0.85, 0.65, 0.4], thesis: 'El caso más extremo de tokenomics tóxicos. Presión de venta por VCs destruirá el capital retail.', tech: ['Escaneo de iris genera rechazo global.', 'Dependencia centralizada de hardware.', 'L2 sin innovación real.'], onchain: ['Menos del 3% del suministro circulando.', 'Transferencias dominadas por cobro de Airdrops.', 'Sin demanda orgánica de compra.'], macro: ['Países prohibiendo escaneo de iris.', 'Escenario regulatorio hostil.', 'Narrativa de IA usada falsamente.'], tokenomics: ['Valoración Diluida astronómica.', 'Desbloqueo agresivo para inversores tempranos.', 'Sin utilidad real.'], security: ['Riesgos masivos de almacenamiento biométrico.', 'Hardware vulnerable.', 'Auditorías señalan centralización.'], adoption: ['Usuarios escaneados solo por recompensa.', 'Prohibiciones destruyen potencial.', 'DApps no exigen WLD.'], projections: { short: 'Desangramiento constante.', mid: 'Colapso cuando VCs vendan.', long: 'Caída del 80%+ desde precios actuales.' } },
+            xlm: { id: 'xlm', list: 'omega', tierReq: 3, symbol: 'XLM', name: 'Stellar', narrative: 'Tecnología Obsoleta', verdict: 'Sell', apiSymbol: 'XLMUSDT', projMuls: [0.98, 0.85, 0.6], thesis: 'Completamente reemplazado. Stablecoins nativas en redes modernas hacen que XLM sea inútil.', tech: ['Cero innovación en años.', 'Incapaz de albergar DeFi complejo.', 'Velocidad superada por L1 modernos.'], onchain: ['Volumen diario generado por bots.', 'Flujos institucionales negativos.', 'Direcciones activas estancadas.'], macro: ['Narrativa de moneda para bancos fracasó.', 'Cero menciones en reportes modernos.', 'Expulsada de canastas institucionales.'], tokenomics: ['Fundación retiene alto porcentaje.', 'Inflación artificial.', 'Baja liquidez fiat.'], security: ['Historial de caídas centralizadas.', 'Pocos validadores independientes.', 'Riesgo de centralización.'], adoption: ['Asociaciones antiguas no materializadas.', 'Cero presencia en stablecoins.', 'Comunidad de desarrolladores inexistente.'], projections: { short: 'Oscilación lateral sin catalizadores.', mid: 'Pérdida en ranking de capitalización.', long: 'Rendimiento inferior al mercado.' } }
+        };
+
+        // =======================================================================
+        // 3. COMPONENTE PRINCIPAL (REACT)
+        // =======================================================================
+        const { useState, useEffect, useRef } = React;
 
         function App() {
-            // Estados principales
+            // Estados Autenticación
             const [user, setUser] = useState(null); 
-            const [time, setTime] = useState('');
+            const [isSimulatedVip, setIsSimulatedVip] = useState(false); // Para desarrollo
+            const currentTier = user ? (isSimulatedVip ? 3 : 2) : 1; // Nivel 1 (Invitado), 2 (Gratis), 3 (VIP)
+            
+            // Estados UI
+            const [activeTab, setActiveTab] = useState('alpha');
+            const [selectedAssetKey, setSelectedAssetKey] = useState('sol');
+            const [timeStr, setTimeStr] = useState('');
+            const [datesStr, setDatesStr] = useState({ daily: '', weekly: '' });
+            const [tickerData, setTickerData] = useState([]);
+            const [currentPrice, setCurrentPrice] = useState(null);
+
+            // Estados Modales
             const [showAuthModal, setShowAuthModal] = useState(false);
             const [isLoginMode, setIsLoginMode] = useState(false);
+            const [showVipModal, setShowVipModal] = useState(false);
             
-            // Estados del formulario de registro
+            // Formulario Auth
             const [email, setEmail] = useState('');
             const [password, setPassword] = useState('');
             const [authError, setAuthError] = useState('');
 
-            // Mantener la hora actualizada y escuchar si el usuario inicia sesión
+            // Refs para Gráficos
+            const chartRef = useRef(null);
+            const chartInstance = useRef(null);
+
+            // Iniciar Reloj, Fechas y Ticker
             useEffect(() => {
-                const t = setInterval(() => setTime(new Date().toLocaleTimeString('es-ES', {timeZone: 'UTC'})), 1000);
+                // Reloj
+                const t = setInterval(() => setTimeStr(new Date().toLocaleTimeString('es-ES', {timeZone: 'UTC'})), 1000);
                 
-                const unsubscribe = auth.onAuthStateChanged(user => {
-                    setUser(user);
+                // Fechas
+                const today = new Date();
+                const nextUpdate = new Date(today);
+                nextUpdate.setDate(today.getDate() + ((1 + 7 - today.getDay()) % 7 || 7));
+                setDatesStr({
+                    daily: today.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }).toUpperCase(),
+                    weekly: nextUpdate.toLocaleDateString('es-ES', { weekday: 'long', month: 'long', day: 'numeric' }).toUpperCase() + ' - 08:00 AM PST'
                 });
 
-                return () => {
-                    clearInterval(t);
-                    unsubscribe();
-                };
+                // Ticker
+                fetch('https://api.binance.com/api/v3/ticker/24hr?symbols=["BTCUSDT","ETHUSDT","SOLUSDT","RENDERUSDT","ONDOUSDT","NEARUSDT","TAOUSDT","LINKUSDT","ADAUSDT","WLDUSDT"]')
+                    .then(res => res.json())
+                    .then(data => setTickerData(data))
+                    .catch(err => console.error("Error Ticker", err));
+
+                // Firebase Auth Listener
+                const unsubscribe = auth.onAuthStateChanged(usr => {
+                    setUser(usr);
+                    if(usr) setShowAuthModal(false);
+                });
+
+                return () => { clearInterval(t); unsubscribe(); };
             }, []);
 
-            // Función para Crear Cuenta
-            const handleSignup = async (e) => {
+            // Efecto al seleccionar moneda (Fetch Precio + Gráfico)
+            useEffect(() => {
+                const asset = cryptoData[selectedAssetKey];
+                if(!asset) return;
+
+                setCurrentPrice(null); // Loading state
+
+                fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${asset.apiSymbol}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        const p = parseFloat(data.price);
+                        setCurrentPrice(p);
+                        renderChart(p, asset);
+                    })
+                    .catch(err => {
+                        console.error("Error fetching price", err);
+                        setCurrentPrice(0);
+                    });
+            }, [selectedAssetKey]);
+
+            // Renderizado de Gráfico
+            const renderChart = (price, asset) => {
+                if(!chartRef.current || !price) return;
+                
+                if (chartInstance.current) {
+                    chartInstance.current.destroy();
+                }
+
+                const ctx = chartRef.current.getContext('2d');
+                const isBuy = asset.list === 'alpha';
+                const pShort = price * asset.projMuls[0];
+                const pMid = price * asset.projMuls[1];
+                const pLong = price * asset.projMuls[2];
+
+                const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+                gradient.addColorStop(0, isBuy ? 'rgba(245, 158, 11, 0.4)' : 'rgba(239, 68, 68, 0.4)');
+                gradient.addColorStop(1, 'rgba(0, 0, 0, 0.0)');
+
+                Chart.defaults.font.family = "'Inter', sans-serif";
+                
+                chartInstance.current = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: ['Actual (En vivo)', 'Corto Plazo', 'Medio Plazo', 'Largo Plazo'],
+                        datasets: [{
+                            data: [price, pShort, pMid, pLong],
+                            borderColor: isBuy ? '#f59e0b' : '#ef4444',
+                            backgroundColor: gradient,
+                            borderWidth: 4,
+                            pointBackgroundColor: '#0f172a',
+                            pointBorderColor: isBuy ? '#f59e0b' : '#ef4444',
+                            pointBorderWidth: 3,
+                            pointRadius: 6,
+                            fill: true,
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            y: { grid: { color: '#1e293b', drawBorder: false }, ticks: { color: '#64748b' } },
+                            x: { grid: { color: '#0f172a', drawBorder: false }, ticks: { color: '#94a3b8', font: {weight: 'bold'} } }
+                        }
+                    }
+                });
+            };
+
+            // Helpers de formato de precio
+            const formatPrice = (p) => {
+                if(p === null) return 'Conectando...';
+                if(p === 0) return 'Error API';
+                return `$${Number(p).toLocaleString('en-US', {minimumFractionDigits: (p<1?4:2), maximumFractionDigits:(p<1?4:2)})}`;
+            };
+
+            // Funciones de Firebase
+            const handleAuth = async (e) => {
                 e.preventDefault();
                 setAuthError('');
                 try {
-                    await auth.createUserWithEmailAndPassword(email, password);
-                    setShowAuthModal(false);
+                    if (isLoginMode) await auth.signInWithEmailAndPassword(email, password);
+                    else await auth.createUserWithEmailAndPassword(email, password);
                 } catch (error) {
-                    setAuthError("Error: " + error.message);
+                    setAuthError(isLoginMode ? "Credenciales inválidas." : error.message);
                 }
             };
+            const handleLogout = () => { auth.signOut(); setIsSimulatedVip(false); };
 
-            // Función para Iniciar Sesión
-            const handleLogin = async (e) => {
-                e.preventDefault();
-                setAuthError('');
-                try {
-                    await auth.signInWithEmailAndPassword(email, password);
-                    setShowAuthModal(false);
-                } catch (error) {
-                    setAuthError("Correo o contraseña incorrectos.");
-                }
-            };
-
-            // Función para Cerrar Sesión
-            const handleLogout = () => {
-                auth.signOut();
-            };
+            const selectedAsset = cryptoData[selectedAssetKey];
 
             return (
-                <div className="min-h-screen flex flex-col relative">
+                <div className="flex flex-col min-h-screen">
                     
-                    {/* BARRA SUPERIOR */}
-                    <header className="bg-[#0B1120] border-b border-slate-800 p-4 sticky top-0 z-40">
-                        <div className="max-w-7xl mx-auto flex justify-between items-center">
-                            <div className="flex items-center space-x-3">
-                                <span className="text-amber-500 text-3xl drop-shadow-[0_0_10px_rgba(245,158,11,0.4)]">⬢</span>
+                    {/* TICKER TAPE */}
+                    <div className="ticker-wrap h-10">
+                        <div className="ticker-label font-mono uppercase">MERCADO VIVO ●</div>
+                        <div className="ticker-content">
+                            {tickerData.length > 0 ? tickerData.map(coin => {
+                                const sym = coin.symbol.replace('USDT', '');
+                                let p = parseFloat(coin.lastPrice);
+                                p = p < 0.01 ? p.toFixed(4) : (p < 1 ? p.toFixed(3) : p.toFixed(2));
+                                const change = parseFloat(coin.priceChangePercent);
+                                const isUp = change >= 0;
+                                return (
+                                    <div key={coin.symbol} className="ticker-item">
+                                        <span className="text-white font-bold">{sym}</span> 
+                                        <span className="text-slate-300 ml-1">${p}</span> 
+                                        <span className={`${isUp ? 'text-green-500' : 'text-red-500'} ml-2 font-bold`}>{isUp ? '▲' : '▼'} {Math.abs(change).toFixed(2)}%</span>
+                                        <span className="text-slate-700 mx-4">|</span>
+                                    </div>
+                                );
+                            }) : <span className="text-slate-500 font-mono text-sm px-10">Conectando a satélites institucionales...</span>}
+                        </div>
+                    </div>
+
+                    {/* ENCABEZADO */}
+                    <header className="bg-[#0B1120]/90 backdrop-blur-md border-b border-slate-800 p-4 lg:p-6 flex flex-col lg:flex-row justify-between items-center z-40 sticky top-0">
+                        <div className="flex flex-col lg:items-start mb-4 lg:mb-0 w-full lg:w-2/3">
+                            <div className="flex items-center space-x-4 mb-2">
+                                <span className="text-amber-500 text-4xl lg:text-5xl animate-pulse drop-shadow-[0_0_15px_rgba(245,158,11,0.4)]">⬢</span>
                                 <div>
-                                    <h1 className="text-xl font-black font-mono text-white tracking-tighter">Q.A100X.APP</h1>
-                                    <p className="text-[10px] text-slate-500 font-bold tracking-widest">{time} UTC</p>
+                                    <h1 className="text-2xl lg:text-3xl font-black font-mono tracking-tighter text-white uppercase leading-none">Q.A100X Terminal</h1>
+                                    <h2 className="text-sm font-bold font-mono text-slate-400 uppercase mt-1">Análisis Institucional</h2>
                                 </div>
                             </div>
                             
-                            {/* SECCIÓN DE USUARIO ARRIBA A LA DERECHA */}
-                            <div className="flex items-center space-x-4">
-                                {user ? (
-                                    <div className="flex items-center space-x-4">
-                                        <div className="hidden md:block text-right">
-                                            <p className="text-xs text-slate-400 font-mono">{user.email}</p>
-                                            <p className="text-[10px] text-emerald-400 font-bold">NIVEL 2: FREEMIUM</p>
-                                        </div>
-                                        <button onClick={handleLogout} className="text-xs border border-slate-700 text-slate-400 hover:text-white px-3 py-1.5 rounded transition-colors">Salir</button>
+                            <div className="flex flex-col xl:flex-row items-center xl:items-start gap-4 mt-3 w-full">
+                                <div className="flex flex-wrap justify-center lg:justify-start gap-3">
+                                    <div className="bg-[#020617] border border-slate-700 px-3 py-1.5 rounded flex items-center shadow-inner">
+                                        <span className="text-cyan-500 text-xs mr-2 animate-pulse">●</span>
+                                        <span className="text-[10px] font-black text-slate-400 font-mono mr-1">ACTUALIZADO:</span>
+                                        <span className="text-[10px] font-black text-white font-mono uppercase">{datesStr.daily}</span>
                                     </div>
-                                ) : (
-                                    <div className="flex space-x-2">
-                                        <button onClick={() => { setIsLoginMode(true); setShowAuthModal(true); }} className="text-xs font-bold text-slate-300 hover:text-white px-3 py-2">Ingresar</button>
-                                        <button onClick={() => { setIsLoginMode(false); setShowAuthModal(true); }} className="text-xs font-black bg-amber-500 text-black px-4 py-2 rounded shadow-[0_0_15px_rgba(245,158,11,0.3)] hover:bg-amber-400 transition-colors">
-                                            REGISTRARSE GRATIS
-                                        </button>
+                                    <div className="bg-[#020617] border border-amber-500/30 px-3 py-1.5 rounded flex items-center shadow-inner">
+                                        <span className="text-amber-500 text-xs mr-2">⏱</span>
+                                        <span className="text-[10px] font-black text-slate-400 font-mono mr-1">REBALANCEO:</span>
+                                        <span className="text-[10px] font-black text-amber-400 font-mono uppercase">{datesStr.weekly}</span>
                                     </div>
-                                )}
+                                </div>
                             </div>
+                        </div>
+
+                        {/* CONTROLES DE USUARIO */}
+                        <div className="flex flex-col items-center lg:items-end mt-4 lg:mt-0">
+                            {user ? (
+                                <div className="flex flex-col items-end">
+                                    <div className={`px-4 py-1.5 rounded font-black text-xs uppercase tracking-wider mb-2 flex items-center border ${currentTier === 3 ? 'bg-amber-500/10 border-amber-500/50 text-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.2)]' : 'bg-blue-500/10 border-blue-500/50 text-blue-400'}`}>
+                                        <span className="mr-2 text-sm">{currentTier === 3 ? '💎' : '🔓'}</span> 
+                                        {currentTier === 3 ? 'MEMBRESÍA VIP ACTIVA' : 'NIVEL 2 FREEMIUM ACTIVO'}
+                                    </div>
+                                    <div className="flex space-x-3 items-center">
+                                        <span className="text-xs text-slate-400 font-mono">{user.email}</span>
+                                        <button onClick={handleLogout} className="text-xs text-slate-500 hover:text-white underline">Salir</button>
+                                        {currentTier === 2 && <button onClick={()=>setIsSimulatedVip(true)} className="text-[10px] bg-amber-500 text-black px-2 py-1 rounded font-bold">Simular VIP</button>}
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="flex flex-col items-center lg:items-end">
+                                    <button onClick={() => { setIsLoginMode(false); setShowAuthModal(true); }} className="bg-amber-500 text-black px-6 py-2 rounded font-black text-sm uppercase tracking-wider hover:bg-amber-400 transition-colors shadow-[0_0_20px_rgba(245,158,11,0.3)] transform hover:scale-105 mb-2">
+                                        CREAR CUENTA GRATIS
+                                    </button>
+                                    <button onClick={() => { setIsLoginMode(true); setShowAuthModal(true); }} className="text-xs text-slate-400 hover:text-white underline">Ya tengo cuenta (Entrar)</button>
+                                </div>
+                            )}
                         </div>
                     </header>
 
-                    {/* CONTENIDO DE LA TERMINAL */}
-                    <main className="flex-1 p-4 md:p-8 max-w-7xl mx-auto w-full">
-                        <div className="mb-8">
-                            <h2 className="text-3xl font-black text-white">Tablero de Inteligencia</h2>
-                            <p className="text-slate-400 mt-1">
-                                {user ? "Acceso Nivel 2. Analizando flujos institucionales." : "Crea tu cuenta gratis para desbloquear el Nivel 2."}
-                            </p>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            
-                            {/* CAJA 1: PÚBLICA (Nivel 1) */}
-                            <div className="bg-[#0B1120] border border-slate-800 rounded-2xl p-6">
-                                <span className="bg-emerald-500/10 text-emerald-400 text-xs font-black px-2 py-1 rounded border border-emerald-500/30 uppercase tracking-widest">NIVEL 1: Público</span>
-                                <h3 className="text-2xl font-black text-white mt-4">Bitcoin (BTC)</h3>
-                                <p className="text-slate-400 text-sm mt-2 mb-4">Soporte estructural impulsado por ETFs e instituciones.</p>
-                                <div className="bg-[#020617] p-4 rounded-xl border border-slate-800 flex justify-between items-center">
-                                    <span className="text-slate-500 font-bold text-sm">Proyección:</span>
-                                    <span className="text-emerald-400 font-mono font-black">+18.5%</span>
-                                </div>
+                    {/* CUERPO PRINCIPAL */}
+                    <div className="flex-1 flex flex-col xl:flex-row w-full relative">
+                        
+                        {/* BARRA LATERAL (LISTA DE ACTIVOS) */}
+                        <aside className="w-full xl:w-[350px] bg-[#0B1120] border-r border-slate-800 flex flex-col shrink-0">
+                            <div className="flex border-b border-slate-800">
+                                <button onClick={() => setActiveTab('alpha')} className={`flex-1 py-4 text-sm font-black transition-colors flex items-center justify-center ${activeTab === 'alpha' ? 'text-amber-500 border-b-2 border-amber-500 bg-[#020617]' : 'text-slate-500 hover:text-slate-300'}`}><span className="text-xl mr-2">💎</span> ALPHA (LONG)</button>
+                                <button onClick={() => setActiveTab('omega')} className={`flex-1 py-4 text-sm font-black transition-colors flex items-center justify-center ${activeTab === 'omega' ? 'text-red-500 border-b-2 border-red-500 bg-[#020617]' : 'text-slate-500 hover:text-slate-300'}`}><span className="text-xl mr-2">🚨</span> OMEGA (SHORT)</button>
                             </div>
+                            
+                            <div className="overflow-y-auto p-4 space-y-2 h-[40vh] xl:h-[calc(100vh-200px)]">
+                                {Object.values(cryptoData).filter(item => item.list === activeTab).map(asset => {
+                                    const isLocked = asset.tierReq > currentTier;
+                                    const dotColor = activeTab === 'alpha' ? 'bg-green-500' : 'bg-red-500';
+                                    const isSelected = selectedAssetKey === asset.id;
 
-                            {/* CAJA 2: FREEMIUM (Nivel 2 - Requiere Login) */}
-                            <div className="bg-[#0B1120] border border-slate-800 rounded-2xl p-6 relative overflow-hidden">
-                                {!user && (
-                                    <div className="absolute inset-0 z-10 modal-backdrop flex flex-col items-center justify-center">
-                                        <span className="text-4xl mb-3">🔒</span>
-                                        <p className="text-white font-bold mb-3">Contenido Nivel 2</p>
-                                        <button onClick={() => { setIsLoginMode(false); setShowAuthModal(true); }} className="bg-amber-500 text-black text-xs font-black px-4 py-2 rounded">
-                                            DESBLOQUEAR GRATIS
+                                    if (isLocked) {
+                                        return (
+                                            <button key={asset.id} onClick={() => currentTier === 1 ? setShowAuthModal(true) : setShowVipModal(true)} className="w-full text-left p-4 rounded-xl border border-slate-800 hover:border-amber-500/50 bg-[#0B1120] transition-all relative overflow-hidden group">
+                                                <div className={`absolute inset-0 bg-gradient-to-r ${activeTab === 'alpha' ? 'from-amber-500/5' : 'from-red-500/5'} to-transparent`}></div>
+                                                <div className="flex items-center space-x-3 relative z-10">
+                                                    <div className="w-3 h-3 rounded-full bg-amber-500 animate-pulse"></div>
+                                                    <div>
+                                                        <p className={`font-black ${activeTab === 'alpha' ? 'text-amber-500' : 'text-red-500'} font-mono text-base`}>{currentTier === 1 ? '🔒 REGÍSTRATE GRATIS' : '🔒 REQUIERE VIP'}</p>
+                                                        <p className="text-xs font-bold text-slate-400">{activeTab === 'alpha' ? 'GEMA OCULTA' : 'TRAMPA DETECTADA'}</p>
+                                                    </div>
+                                                </div>
+                                            </button>
+                                        );
+                                    }
+
+                                    return (
+                                        <button key={asset.id} onClick={() => setSelectedAssetKey(asset.id)} className={`w-full text-left p-4 rounded-xl border transition-all flex justify-between items-center group ${isSelected ? 'border-amber-500 bg-[#020617] shadow-[0_0_15px_rgba(245,158,11,0.1)]' : 'border-slate-800 hover:border-slate-600 bg-[#0B1120]'}`}>
+                                            <div className="flex items-center space-x-3">
+                                                <div className={`w-3 h-3 rounded-full ${dotColor}`}></div>
+                                                <div>
+                                                    <p className="font-black text-slate-100 font-mono text-base">{asset.symbol}</p>
+                                                    <p className="text-xs font-bold text-slate-500 group-hover:text-slate-400">{asset.name}</p>
+                                                </div>
+                                            </div>
+                                            <span className={`text-xs font-black transition-colors hidden md:block ${isSelected ? 'text-amber-500' : 'text-slate-600 group-hover:text-slate-300'}`}>VER</span>
                                         </button>
+                                    );
+                                })}
+                            </div>
+                        </aside>
+
+                        {/* DASHBOARD PRINCIPAL DE ANÁLISIS */}
+                        <main className="flex-1 overflow-y-auto p-4 lg:p-8 bg-[#020617]">
+                            <div className="max-w-7xl mx-auto space-y-8">
+                                
+                                {/* Header del Activo */}
+                                <div className="flex flex-col lg:flex-row justify-between items-start border-b border-slate-800 pb-6 gap-4">
+                                    <div>
+                                        <div className="flex items-center space-x-4 mb-3">
+                                            <h2 className="text-4xl lg:text-5xl font-black text-white tracking-tight">{selectedAsset.name}</h2>
+                                            <span className="bg-slate-800 text-white px-4 py-1.5 rounded text-lg font-bold border border-slate-600">{selectedAsset.symbol}</span>
+                                        </div>
+                                        <p className="text-amber-500 text-lg font-bold tracking-widest uppercase">{selectedAsset.narrative}</p>
                                     </div>
-                                )}
-                                
-                                <span className="bg-blue-500/10 text-blue-400 text-xs font-black px-2 py-1 rounded border border-blue-500/30 uppercase tracking-widest">NIVEL 2: Freemium</span>
-                                <h3 className="text-2xl font-black text-white mt-4">{user ? "Solana (SOL)" : "Activo Oculto"}</h3>
-                                <p className="text-slate-400 text-sm mt-2 mb-4">{user ? "Dominancia en adopción minorista y velocidad." : "Crea tu cuenta para revelar."}</p>
-                                <div className="bg-[#020617] p-4 rounded-xl border border-slate-800 flex justify-between items-center">
-                                    <span className="text-slate-500 font-bold text-sm">Proyección:</span>
-                                    <span className="text-emerald-400 font-mono font-black">{user ? "+22.4%" : "??.?"}</span>
+                                    <div className="bg-[#0B1120] p-4 rounded-xl border border-slate-800 min-w-[200px] text-center lg:text-right">
+                                        <p className="text-xs text-slate-500 font-mono mb-2">VEREDICTO ALGORÍTMICO</p>
+                                        <div className={`inline-block px-5 py-2 rounded font-black text-xl tracking-wide border ${selectedAsset.verdict.includes('Buy') ? 'border-green-500 text-green-400 bg-green-500/10 shadow-[0_0_15px_rgba(34,197,94,0.2)]' : (selectedAsset.verdict.includes('Hold') ? 'border-yellow-500 text-yellow-400 bg-yellow-500/10' : 'border-red-500 text-red-400 bg-red-500/10 shadow-[0_0_15px_rgba(239,68,68,0.2)]')}`}>
+                                            {selectedAsset.verdict.toUpperCase()}
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                            
-                            {/* CAJA 3: VIP (Nivel 3 - Bloqueada por ahora) */}
-                            <div className="bg-[#0B1120] border border-amber-500/30 rounded-2xl p-6 relative overflow-hidden md:col-span-2 shadow-[0_0_30px_rgba(245,158,11,0.05)]">
-                                <div className="absolute inset-0 z-10 modal-backdrop flex flex-col items-center justify-center">
-                                    <span className="text-amber-500 text-4xl mb-3">💎</span>
-                                    <p className="text-amber-500 font-bold mb-1">Gema Institucional (Nivel 3)</p>
-                                    <p className="text-slate-400 text-xs mb-4">Exclusivo para miembros VIP</p>
-                                    <button className="bg-gradient-to-r from-amber-500 to-orange-500 text-black text-sm font-black px-6 py-2 rounded-full uppercase tracking-wider hover:scale-105 transition-transform">
-                                        HACER UPGRADE VIP
-                                    </button>
-                                    <p className="text-[10px] text-slate-500 mt-2">Próximamente: Integración con Stripe</p>
-                                </div>
-                                
-                                <span className="bg-amber-500/10 text-amber-500 text-xs font-black px-2 py-1 rounded border border-amber-500/30 uppercase tracking-widest">NIVEL 3: VIP</span>
-                                <h3 className="text-2xl font-black text-white mt-4">Activo Oculto 100X</h3>
-                                <p className="text-slate-400 text-sm mt-2 mb-4">Tesis confidencial revelada solo a suscriptores VIP.</p>
-                                <div className="bg-[#020617] p-4 rounded-xl border border-slate-800 flex justify-between items-center">
-                                    <span className="text-slate-500 font-bold text-sm">Proyección:</span>
-                                    <span className="text-amber-500 font-mono font-black">+350.0%</span>
-                                </div>
-                            </div>
 
-                        </div>
-                    </main>
+                                {/* Tesis */}
+                                <section className="bg-[#0B1120] border-l-4 border-amber-500 p-6 rounded-r-xl shadow-lg">
+                                    <p className="text-base text-slate-200 font-medium leading-relaxed">"{selectedAsset.thesis}"</p>
+                                </section>
 
-                    {/* =======================================================================
-                        VENTANA EMERGENTE DE REGISTRO / INICIO DE SESIÓN
-                    ======================================================================= */}
+                                {/* 6 Paneles de Datos */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                                    {[
+                                        { title: '⚙️ Análisis Técnico', data: selectedAsset.tech },
+                                        { title: '⛓️ Flujos On-Chain', data: selectedAsset.onchain },
+                                        { title: '🌍 Contexto Macro', data: selectedAsset.macro },
+                                        { title: '💎 Tokenomics', data: selectedAsset.tokenomics },
+                                        { title: '🛡️ Seguridad', data: selectedAsset.security },
+                                        { title: '🚀 Adopción', data: selectedAsset.adoption }
+                                    ].map((panel, i) => (
+                                        <div key={i} className="bg-[#0B1120] border border-slate-800 rounded-xl p-6 glow-box hover:border-slate-600 transition-colors">
+                                            <h3 className="text-sm font-black uppercase text-slate-400 tracking-widest mb-4">{panel.title}</h3>
+                                            <ul className="space-y-3 font-medium text-sm text-slate-300">
+                                                {panel.data.map((item, j) => (
+                                                    <li key={j} className="flex items-start"><span className="text-amber-500 mr-2 font-black">›</span><span className="leading-relaxed">{item}</span></li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* Gráficos y Proyecciones */}
+                                <section className="bg-[#0B1120] border border-slate-800 rounded-xl p-6 lg:p-8 relative">
+                                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8">
+                                        <h2 className="text-sm font-black uppercase text-slate-400 tracking-widest mb-4 md:mb-0"><span className="text-xl mr-2">📊</span> Proyección Cuantitativa</h2>
+                                        <div className="bg-[#020617] px-6 py-3 rounded-xl border border-slate-800 text-center md:text-right w-full md:w-auto">
+                                            <p className="text-xs text-slate-500 font-black mb-1">PRECIO EN VIVO (BINANCE)</p>
+                                            <p className="text-3xl font-black text-white font-mono">{formatPrice(currentPrice)}</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="chart-container mb-10 bg-[#020617] border border-slate-800/50 rounded-xl overflow-hidden p-2">
+                                        <canvas ref={chartRef}></canvas>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                        <div className="bg-[#020617] p-6 rounded-xl border border-slate-800">
+                                            <h3 className="text-xs font-black text-slate-500 mb-2">OBJETIVO CORTO PLAZO</h3>
+                                            <p className={`text-2xl font-black font-mono mb-3 ${selectedAsset.list==='alpha' ? 'text-cyan-400' : 'text-red-300'}`}>{formatPrice(currentPrice ? currentPrice * selectedAsset.projMuls[0] : null)}</p>
+                                            <p className="text-sm font-medium text-slate-300">{selectedAsset.projections.short}</p>
+                                        </div>
+                                        <div className="bg-[#020617] p-6 rounded-xl border border-slate-800">
+                                            <h3 className="text-xs font-black text-slate-500 mb-2">OBJETIVO MEDIO PLAZO</h3>
+                                            <p className={`text-2xl font-black font-mono mb-3 ${selectedAsset.list==='alpha' ? 'text-blue-400' : 'text-red-400'}`}>{formatPrice(currentPrice ? currentPrice * selectedAsset.projMuls[1] : null)}</p>
+                                            <p className="text-sm font-medium text-slate-300">{selectedAsset.projections.mid}</p>
+                                        </div>
+                                        <div className="bg-[#020617] p-6 rounded-xl border border-slate-800 shadow-[0_0_20px_rgba(245,158,11,0.05)]">
+                                            <h3 className="text-xs font-black text-slate-500 mb-2">OBJETIVO LARGO PLAZO</h3>
+                                            <p className={`text-2xl font-black font-mono mb-3 ${selectedAsset.list==='alpha' ? 'text-amber-400' : 'text-red-500'}`}>{formatPrice(currentPrice ? currentPrice * selectedAsset.projMuls[2] : null)}</p>
+                                            <p className="text-sm font-medium text-slate-300">{selectedAsset.projections.long}</p>
+                                        </div>
+                                    </div>
+                                </section>
+                            </div>
+                        </main>
+                    </div>
+
+                    {/* MODAL AUTH (FIREBASE LOGIN/SIGNUP) */}
                     {showAuthModal && (
                         <div className="fixed inset-0 z-50 modal-backdrop flex items-center justify-center p-4">
-                            <div className="bg-[#0B1120] border border-slate-700 w-full max-w-md rounded-2xl p-8 relative shadow-2xl">
-                                <button onClick={() => setShowAuthModal(false)} className="absolute top-4 right-4 text-slate-500 hover:text-white text-xl">✕</button>
+                            <div className="bg-[#0B1120] border border-amber-500/30 w-full max-w-md rounded-3xl p-8 relative shadow-[0_0_40px_rgba(245,158,11,0.15)] overflow-hidden">
+                                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-amber-500 to-transparent"></div>
+                                <button onClick={() => setShowAuthModal(false)} className="absolute top-5 right-5 text-slate-500 hover:text-white text-xl">✕</button>
                                 
-                                <div className="text-center mb-6">
-                                    <span className="text-amber-500 text-4xl block mb-2">⬢</span>
-                                    <h2 className="text-2xl font-black text-white uppercase">{isLoginMode ? 'Iniciar Sesión' : 'Crear Cuenta Gratis'}</h2>
-                                    <p className="text-slate-400 text-sm mt-1">{isLoginMode ? 'Accede a tu terminal' : 'Desbloquea el Nivel 2 instantáneamente'}</p>
+                                <div className="text-center mb-8 mt-2">
+                                    <span className="text-amber-500 text-5xl block mb-4 drop-shadow-[0_0_15px_rgba(245,158,11,0.5)]">⬢</span>
+                                    <h2 className="text-2xl font-black text-white uppercase tracking-tighter">{isLoginMode ? 'Conexión Segura' : 'Desbloquea el Nivel 2'}</h2>
+                                    <p className="text-slate-400 text-sm mt-2 font-medium">{isLoginMode ? 'Ingresa tus credenciales para acceder a la terminal.' : 'Crea tu cuenta gratis hoy para revelar 3 activos adicionales.'}</p>
                                 </div>
 
-                                {authError && (
-                                    <div className="bg-red-500/10 border border-red-500/30 text-red-500 text-xs font-bold p-3 rounded mb-4 text-center">
-                                        {authError}
-                                    </div>
-                                )}
+                                {authError && <div className="bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-bold p-3 rounded mb-4 text-center">{authError}</div>}
 
-                                <form onSubmit={isLoginMode ? handleLogin : handleSignup} className="space-y-4">
+                                <form onSubmit={handleAuth} className="space-y-4">
                                     <div>
-                                        <label className="block text-xs font-bold text-slate-500 mb-1 uppercase">Correo Electrónico</label>
-                                        <input 
-                                            type="email" 
-                                            value={email}
-                                            onChange={(e) => setEmail(e.target.value)}
-                                            required
-                                            className="w-full bg-[#020617] border border-slate-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:border-amber-500 transition-colors"
-                                            placeholder="tu@correo.com"
-                                        />
+                                        <input type="email" value={email} onChange={e => setEmail(e.target.value)} required className="w-full bg-[#020617] border border-slate-700 text-white rounded-xl px-4 py-4 focus:outline-none focus:border-amber-500 transition-colors shadow-inner" placeholder="Correo electrónico institucional" />
                                     </div>
                                     <div>
-                                        <label className="block text-xs font-bold text-slate-500 mb-1 uppercase">Contraseña</label>
-                                        <input 
-                                            type="password" 
-                                            value={password}
-                                            onChange={(e) => setPassword(e.target.value)}
-                                            required
-                                            className="w-full bg-[#020617] border border-slate-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:border-amber-500 transition-colors"
-                                            placeholder="••••••••"
-                                        />
+                                        <input type="password" value={password} onChange={e => setPassword(e.target.value)} required className="w-full bg-[#020617] border border-slate-700 text-white rounded-xl px-4 py-4 focus:outline-none focus:border-amber-500 transition-colors shadow-inner" placeholder="Contraseña segura" />
                                     </div>
-                                    <button type="submit" className="w-full bg-amber-500 hover:bg-amber-400 text-black font-black py-3 rounded-lg uppercase tracking-wider transition-colors mt-2">
-                                        {isLoginMode ? 'Entrar a la Terminal' : 'Registrarse y Desbloquear'}
+                                    <button type="submit" className="w-full bg-amber-500 hover:bg-amber-400 text-black font-black text-lg py-4 rounded-xl uppercase tracking-widest transition-colors mt-4 shadow-[0_0_20px_rgba(245,158,11,0.2)]">
+                                        {isLoginMode ? 'INGRESAR' : 'REGISTRARSE GRATIS'}
                                     </button>
                                 </form>
 
-                                <div className="mt-6 text-center border-t border-slate-800 pt-4">
-                                    <button onClick={() => { setIsLoginMode(!isLoginMode); setAuthError(''); }} className="text-sm text-slate-400 hover:text-white transition-colors">
-                                        {isLoginMode ? '¿No tienes cuenta? Regístrate gratis' : '¿Ya tienes cuenta? Inicia sesión'}
+                                <div className="mt-6 text-center">
+                                    <button onClick={() => { setIsLoginMode(!isLoginMode); setAuthError(''); }} className="text-sm text-slate-500 hover:text-white transition-colors underline underline-offset-4">
+                                        {isLoginMode ? '¿No tienes cuenta? Regístrate aquí' : '¿Ya tienes cuenta? Inicia sesión'}
                                     </button>
                                 </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* MODAL VIP (UPGRADE A NIVEL 3) */}
+                    {showVipModal && (
+                        <div className="fixed inset-0 z-50 modal-backdrop flex items-center justify-center p-4">
+                            <div className="bg-[#0B1120] border-2 border-amber-500/50 w-full max-w-lg rounded-3xl p-8 relative shadow-[0_0_50px_rgba(245,158,11,0.2)] text-center">
+                                <button onClick={() => setShowVipModal(false)} className="absolute top-5 right-5 text-slate-500 hover:text-white text-xl">✕</button>
+                                
+                                <span className="text-6xl block mb-4">💎</span>
+                                <div className="bg-amber-500/10 text-amber-500 text-xs font-black px-3 py-1 rounded-full inline-block border border-amber-500/30 mb-4 tracking-widest">NIVEL 3 REQUERIDO</div>
+                                <h2 className="text-3xl font-black text-white uppercase tracking-tighter mb-4">Acceso VIP Restringido</h2>
+                                <p className="text-slate-300 text-base mb-8 leading-relaxed">Estás intentando acceder a una Gema Institucional Oculta. Para ver todos los análisis, alertas y proyecciones de Wall Street, necesitas la membresía VIP.</p>
+                                
+                                <button className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-black font-black text-xl py-4 rounded-xl hover:scale-105 transition-transform shadow-[0_0_25px_rgba(245,158,11,0.4)] uppercase tracking-wider">
+                                    OBTENER ACCESO VIP AHORA
+                                </button>
+                                <p className="text-xs text-slate-500 mt-4 font-mono">Integración con pasarela de pago (Stripe) en proceso...</p>
                             </div>
                         </div>
                     )}
