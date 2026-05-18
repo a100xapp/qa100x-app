@@ -120,7 +120,7 @@
             const [name, setName] = useState('');
             const [email, setEmail] = useState('');
             const [password, setPassword] = useState('');
-            const [confirmPassword, setConfirmPassword] = useState(''); // NUEVO: Confirmación
+            const [confirmPassword, setConfirmPassword] = useState(''); 
             const [phone, setPhone] = useState('');
             const [countryCode, setCountryCode] = useState('+52'); 
             const [authError, setAuthError] = useState('');
@@ -301,7 +301,7 @@
                                 <span className="text-amber-500 text-4xl lg:text-5xl animate-pulse drop-shadow-[0_0_15px_rgba(245,158,11,0.4)]">⬢</span>
                                 <div>
                                     <h1 className="text-2xl lg:text-3xl font-black font-mono tracking-tighter text-white uppercase leading-none">Q.A100X Terminal</h1>
-                                    <h2 className="text-sm lg:text-base font-bold font-mono text-slate-400 uppercase mt-1">Análisis Cuantitativo Impulsado por Inteligencia Artificial</h2>
+                                    <h2 className="text-sm lg:text-base font-bold font-mono text-slate-400 uppercase mt-1">Analizamos el top 100 de Criptomonedas con todo el potencial de la Inteligencia Artificial.</h2>
                                 </div>
                             </div>
                             <p className="text-sm lg:text-base text-slate-300 font-medium tracking-wide max-w-3xl mt-3 mb-4 text-center lg:text-left">
@@ -345,6 +345,10 @@
                                     <button onClick={() => { setIsLoginMode(true); setShowAuthModal(true); }} className="text-xs text-slate-400 hover:text-white underline mt-2">Ya tengo cuenta (Entrar)</button>
                                 </div>
                             )}
+                            <div className="flex items-center mt-5 space-x-2">
+                                <span className="relative flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span></span>
+                                <p className="text-[10px] text-slate-400 font-bold font-mono">1,204 INVERSORES EN LÍNEA</p>
+                            </div>
                         </div>
                     </header>
 
@@ -536,7 +540,7 @@
                         </div>
                     )}
 
-                    {/* MODAL VIP DE ALTA CONVERSIÓN */}
+                    {/* MODAL VIP DE ALTA CONVERSIÓN RECONSTRUIDO */}
                     {showVipModal && (
                         <div className="fixed inset-0 z-50 modal-backdrop flex items-center justify-center p-4">
                             <div className="bg-[#0B1120] border-2 border-amber-500/50 w-full max-w-lg rounded-3xl p-8 text-center shadow-[0_0_50px_rgba(245,158,11,0.2)]">
@@ -554,10 +558,26 @@
                                 <p className="text-slate-300 text-sm mb-6 leading-relaxed">
                                     Estás a un paso de maximizar tus ganancias aprovechando el máximo potencial de la inteligencia artificial. Desbloquea las gráficas algorítmicas, proyecciones exactas y opera con la misma ventaja injusta de Wall Street.
                                 </p>
+
+                                {/* Lista de Beneficios RESTAURADA */}
+                                <div className="text-left bg-[#020617] border border-amber-500/20 rounded-xl p-5 mb-8 space-y-3">
+                                    <h4 className="text-amber-500 font-black text-sm uppercase tracking-widest mb-2 border-b border-amber-500/20 pb-2">Tu Membresía Incluye:</h4>
+                                    <p className="text-sm text-slate-300 flex items-start"><span className="mr-2">✅</span> <span>Análisis algorítmico de 20 activos de alto impacto.</span></p>
+                                    <p className="text-sm text-slate-300 flex items-start"><span className="mr-2">✅</span> <span>Precios objetivo exactos (Corto, Medio y Largo plazo).</span></p>
+                                    <p className="text-sm text-slate-300 flex items-start"><span className="mr-2">✅</span> <span>Gráficas de Fuerza Relativa Institucional (vs BTC y S&P500).</span></p>
+                                    <p className="text-sm text-slate-300 flex items-start"><span className="mr-2">✅</span> <span>Métricas cuantitativas desbloqueadas (Sharpe, Beta).</span></p>
+                                    <p className="text-sm text-slate-300 flex items-start"><span className="mr-2">✅</span> <span>Rebalanceo estratégico de portafolio cada semana.</span></p>
+                                </div>
                                 
                                 <button onClick={executePayment} className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-black font-black text-xl py-4 rounded-xl uppercase tracking-wider hover:scale-105 transition-transform shadow-[0_0_25px_rgba(245,158,11,0.4)]">
                                     OBTENER ACCESO VIP AHORA
                                 </button>
+                                
+                                {/* Sello de Seguridad de Stripe RESTAURADO */}
+                                <div className="flex items-center justify-center mt-6 space-x-2 bg-[#020617] py-3 px-4 rounded-xl border border-slate-800">
+                                    <span className="text-2xl">🔒</span>
+                                    <p className="text-sm font-bold font-mono text-slate-400">Procesado de forma segura por Stripe</p>
+                                </div>
                             </div>
                         </div>
                     )}
