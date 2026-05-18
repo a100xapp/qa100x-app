@@ -153,7 +153,8 @@
                 nextUpdate.setDate(today.getDate() + ((1 + 7 - today.getDay()) % 7 || 7));
                 setDatesStr({
                     daily: today.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }).toUpperCase(),
-                    weekly: nextUpdate.toLocaleDateString('es-ES', { weekday: 'long', month: 'long', day: 'numeric' }).toUpperCase() + ' - 08:00 AM PST'
+                    // Rebalanceo Lunes a las 10:00 AM PST
+                    weekly: nextUpdate.toLocaleDateString('es-ES', { weekday: 'long', month: 'long', day: 'numeric' }).toUpperCase() + ' - 10:00 AM PST'
                 });
 
                 fetch('https://api.binance.com/api/v3/ticker/24hr?symbols=["BTCUSDT","ETHUSDT","SOLUSDT","RENDERUSDT","ONDOUSDT","NEARUSDT","TAOUSDT","LINKUSDT","ADAUSDT","WLDUSDT"]')
@@ -327,6 +328,31 @@
                 });
             };
 
+            // =====================================
+            // FUNCIONES DE EXPLICACIÓN (BULLETS VIP)
+            // =====================================
+            const renderMetricExplanation = (type, value) => {
+                if (type === 'sharpe') {
+                    const v = parseFloat(value);
+                    if (v >= 1.5) return <ul className="mt-3 text-[10px] text-slate-400 list-disc pl-3 space-y-1"><li><span className="text-green-400 font-bold">Excelente:</span> Supera el benchmark.</li><li>El retorno justifica ampliamente el riesgo asumido.</li></ul>;
+                    if (v >= 1) return <ul className="mt-3 text-[10px] text-slate-400 list-disc pl-3 space-y-1"><li><span className="text-blue-400 font-bold">Bueno:</span> Riesgo moderado.</li><li>Atractivo para institucionales conservadores.</li></ul>;
+                    return <ul className="mt-3 text-[10px] text-slate-400 list-disc pl-3 space-y-1"><li><span className="text-red-400 font-bold">Peligroso:</span> Alta volatilidad.</li><li>El riesgo no compensa la ganancia esperada.</li></ul>;
+                }
+                if (type === 'beta') {
+                    const v = parseFloat(value);
+                    if (v >= 1.5) return <ul className="mt-3 text-[10px] text-slate-400 list-disc pl-3 space-y-1"><li><span className="text-amber-500 font-bold">Agresivo:</span> Alta divergencia.</li><li>Amplifica los movimientos de BTC. Ideal para ganancias rápidas.</li></ul>;
+                    if (v >= 1) return <ul className="mt-3 text-[10px] text-slate-400 list-disc pl-3 space-y-1"><li><span className="text-blue-400 font-bold">Moderado:</span> Sincronizado.</li><li>Fluye a la par del mercado general (Beta 1).</li></ul>;
+                    return <ul className="mt-3 text-[10px] text-slate-400 list-disc pl-3 space-y-1"><li><span className="text-slate-300 font-bold">Defensivo:</span> Menor volatilidad.</li><li>Útil como cobertura de portafolio ante caídas.</li></ul>;
+                }
+                if (type === 'whales') {
+                    if (value.includes('+')) return <ul className="mt-3 text-[10px] text-slate-400 list-disc pl-3 space-y-1"><li><span className="text-green-400 font-bold">Alcista:</span> Acumulación fuerte.</li><li>Carteras de más de $10M comprando activamente.</li></ul>;
+                    return <ul className="mt-3 text-[10px] text-slate-400 list-disc pl-3 space-y-1"><li><span className="text-red-400 font-bold">Bajista:</span> Distribución masiva.</li><li>Salida detectada de capital inteligente (Smart Money).</li></ul>;
+                }
+                if (type === 'rr') {
+                    return <ul className="mt-3 text-[10px] text-slate-400 list-disc pl-3 space-y-1"><li><span className="text-green-400 font-bold">Óptimo:</span> Asimetría positiva.</li><li>La ganancia potencial triplica con creces el riesgo de pérdida.</li></ul>;
+                }
+            };
+
             const formatPrice = (p) => {
                 if(p === null) return 'Calculando...';
                 if(p === 0) return 'Error';
@@ -417,7 +443,7 @@
                                     </div>
                                     <div className="bg-[#020617] border border-amber-500/30 px-3 py-1.5 rounded flex items-center shadow-inner">
                                         <span className="text-amber-500 text-xs mr-2">⏱</span>
-                                        <span className="text-[10px] font-black text-slate-400 font-mono mr-1">REBALANCEO:</span>
+                                        <span className="text-[10px] font-black text-slate-400 font-mono mr-1">REBALANCEO DEL PORTAFOLIO SEMANAL:</span>
                                         <span className="text-[10px] font-black text-amber-400 font-mono uppercase">{datesStr.weekly}</span>
                                     </div>
                                 </div>
@@ -605,22 +631,37 @@
                                     <div className={`bg-gradient-to-br from-[#0B1120] to-[#020617] border border-amber-500/30 rounded-xl p-6 glow-box transition-all duration-300 ${isProjectionsLocked ? 'vip-blur' : ''}`}>
                                         <h3 className="text-sm font-black uppercase text-amber-500 tracking-widest mb-6 border-b border-amber-500/20 pb-3"><span className="text-xl mr-2">🧮</span> Métricas Cuantitativas Wall Street</h3>
                                         
-                                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                                            <div className="bg-[#020617] p-4 rounded-lg border border-slate-800">
-                                                <p className="text-[10px] text-slate-500 font-bold mb-1">SHARPE RATIO (Riesgo)</p>
-                                                <p className="text-xl font-black text-white font-mono">{selectedAsset.advMetrics.sharpe}</p>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                            <div className="bg-[#020617] p-4 rounded-lg border border-slate-800 flex flex-col justify-between">
+                                                <div>
+                                                    <p className="text-[10px] text-slate-500 font-bold mb-1">SHARPE RATIO (Riesgo)</p>
+                                                    <p className="text-xl font-black text-white font-mono">{selectedAsset.advMetrics.sharpe}</p>
+                                                </div>
+                                                {renderMetricExplanation('sharpe', selectedAsset.advMetrics.sharpe)}
                                             </div>
-                                            <div className="bg-[#020617] p-4 rounded-lg border border-slate-800">
-                                                <p className="text-[10px] text-slate-500 font-bold mb-1">BETA (vs BTC)</p>
-                                                <p className="text-xl font-black text-white font-mono">{selectedAsset.advMetrics.beta}</p>
+                                            
+                                            <div className="bg-[#020617] p-4 rounded-lg border border-slate-800 flex flex-col justify-between">
+                                                <div>
+                                                    <p className="text-[10px] text-slate-500 font-bold mb-1">BETA (vs BTC)</p>
+                                                    <p className="text-xl font-black text-white font-mono">{selectedAsset.advMetrics.beta}</p>
+                                                </div>
+                                                {renderMetricExplanation('beta', selectedAsset.advMetrics.beta)}
                                             </div>
-                                            <div className="bg-[#020617] p-4 rounded-lg border border-slate-800">
-                                                <p className="text-[10px] text-slate-500 font-bold mb-1">FLUJO DE BALLENAS (7D)</p>
-                                                <p className={`text-xl font-black font-mono ${selectedAsset.list === 'alpha' ? 'text-green-400' : 'text-red-400'}`}>{selectedAsset.advMetrics.whales}</p>
+                                            
+                                            <div className="bg-[#020617] p-4 rounded-lg border border-slate-800 flex flex-col justify-between">
+                                                <div>
+                                                    <p className="text-[10px] text-slate-500 font-bold mb-1">FLUJO DE BALLENAS (7D)</p>
+                                                    <p className={`text-xl font-black font-mono ${selectedAsset.list === 'alpha' ? 'text-green-400' : 'text-red-400'}`}>{selectedAsset.advMetrics.whales}</p>
+                                                </div>
+                                                {renderMetricExplanation('whales', selectedAsset.advMetrics.whales)}
                                             </div>
-                                            <div className="bg-[#020617] p-4 rounded-lg border border-slate-800">
-                                                <p className="text-[10px] text-slate-500 font-bold mb-1">RIESGO/RECOMPENSA</p>
-                                                <p className="text-xl font-black text-white font-mono">{selectedAsset.advMetrics.rr}</p>
+                                            
+                                            <div className="bg-[#020617] p-4 rounded-lg border border-slate-800 flex flex-col justify-between">
+                                                <div>
+                                                    <p className="text-[10px] text-slate-500 font-bold mb-1">RIESGO/RECOMPENSA</p>
+                                                    <p className="text-xl font-black text-white font-mono">{selectedAsset.advMetrics.rr}</p>
+                                                </div>
+                                                {renderMetricExplanation('rr', selectedAsset.advMetrics.rr)}
                                             </div>
                                         </div>
                                     </div>
@@ -689,6 +730,16 @@
                                             
                                             <div className="chart-container bg-[#020617] border border-slate-800/50 rounded-xl overflow-hidden p-2">
                                                 <canvas ref={compChartRef}></canvas>
+                                            </div>
+
+                                            {/* ANÁLISIS DE LA GRÁFICA RELATIVA */}
+                                            <div className="mt-6 bg-[#020617] border border-slate-800 p-5 rounded-xl shadow-inner">
+                                                <h4 className="text-xs font-black text-amber-500 mb-3 uppercase tracking-widest">💡 Análisis algorítmico de la gráfica</h4>
+                                                <ul className="text-sm text-slate-300 space-y-3 list-disc pl-4 marker:text-amber-500">
+                                                    <li><span className="text-white font-bold">Correlación Base:</span> La línea de <b>{selectedAsset.symbol}</b> ilustra su momento de fuerza relativa tomando como ancla el rendimiento de Bitcoin.</li>
+                                                    <li><span className="text-white font-bold">Comportamiento:</span> Al ser catalogado en la zona {selectedAsset.list === 'alpha' ? <span className="text-green-400 font-bold">Alpha (Long)</span> : <span className="text-red-400 font-bold">Omega (Short)</span>} y poseer un Beta de {selectedAsset.advMetrics.beta}, la gráfica confirma {selectedAsset.list === 'alpha' ? "una divergencia positiva que demuestra entrada constante de flujo institucional sobre el promedio del mercado." : "debilidad estructural con salidas de liquidez al compararlo con el mercado global."}</li>
+                                                    <li><span className="text-white font-bold">Benchmark TradFi:</span> El proxy del S&P 500 evidencia la diferencia de volatilidad, justificando la inclusión de este activo cripto para el retorno asimétrico del portafolio.</li>
+                                                </ul>
                                             </div>
                                         </div>
 
