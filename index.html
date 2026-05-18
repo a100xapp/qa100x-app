@@ -5,25 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Q.A100X | Terminal Institucional</title>
     
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- React & ReactDOM -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     
-    <!-- Babel para compilar JSX -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    <!-- FIREBASE -->
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
 
-    <!-- Fuentes Profesionales -->
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
     
     <style>
@@ -56,10 +50,13 @@
 
     <script type="text/babel">
         // =======================================================================
-        // 1. CONFIGURACIÓN ABSOLUTA DE PRODUCCIÓN (FIREBASE, STRIPE)
+        // 1. CONFIGURACIÓN ABSOLUTA DE PRODUCCIÓN (FIREBASE, PAGOS)
         // =======================================================================
-        const STRIPE_PAYMENT_LINK = "https://buy.stripe.com/28E00j4f03q9fJF0sU8Ra01";
-        const STRIPE_CUSTOMER_PORTAL = "https://billing.stripe.com/p/login/cNidR96n81i1gNJgrS8Ra00"; 
+        // CEO: Si te mudas a Hotmart, pega aquí tu link de Checkout de Hotmart.
+        const PAYMENT_LINK = "https://buy.stripe.com/28E00j4f03q9fJF0sU8Ra01";
+        
+        // Link de gestión de suscripción
+        const CUSTOMER_PORTAL = "https://billing.stripe.com/p/login/cNidR96n81i1gNJgrS8Ra00"; 
 
         const firebaseConfig = {
             apiKey: "AIzaSyATUuq8jhfiFPwzlhvV6G1hk9u6fCtqS8w",
@@ -77,33 +74,25 @@
         const auth = firebase.auth();
         const db = firebase.firestore();
 
+        // Helpers Globales
+        const formatPrice = (p) => {
+            if(p === null || p === undefined) return 'Calculando...';
+            if(p === 0) return 'Error API';
+            return `$${Number(p).toLocaleString('en-US', {minimumFractionDigits: (p<1?4:2), maximumFractionDigits:(p<1?4:2)})}`;
+        };
+
         // =======================================================================
-        // 2. BASE DE DATOS DE RESPALDO Y NIVELES
-        // Nivel 1 = BTC y ADA gratis.
-        // Nivel 2 = SOL, RNDR, WLD, XLM se suman a los gratis (3 y 3 en total). El resto es Nivel 3.
+        // 2. BASE DE DATOS DE RESPALDO (Pre-cargada con el Rebalanceo Corregido)
         // =======================================================================
         const fallbackLocalData = {
-            btc: { id: 'btc', list: 'alpha', tierReq: 1, fullFree: true, symbol: 'BTC', name: 'Bitcoin', narrative: 'Store of Value / Macro Asset', verdict: 'Hold', apiSymbol: 'BTCUSDT', projMuls: [1.08, 1.25, 1.8], advMetrics: { sharpe: "1.85", beta: "1.00", whales: "+4.2%", rr: "1:3.5" }, thesis: 'Refugio algorítmico primario. Activo maduro con flujos institucionales vía ETFs.', tech: ['Hashrate en máximos históricos.', 'Desarrollo en L2 mejorando utilidad.', 'Halving ejecutado con éxito.'], onchain: ['ETFs absorbiendo más emisión.', 'Carteras antiguas mantienen posiciones.', 'Capitulación de mineros terminada.'], macro: ['Expansión de liquidez global presiona al alza.', 'Bancos centrales acumulando.', 'Incertidumbre fortalece oro digital.'], tokenomics: ['Inflación reducida a menos de 1%.', 'Suministro fijo de 21 millones.', 'Pérdida histórica aumenta escasez.'], security: ['Imposibilidad de ataque 51%.', 'Código base ultra conservador.', 'Red global imparable.'], adoption: ['Wall Street ofreciendo ETFs.', 'Adopción soberana.', 'Colateral premier TradFi.'], projections: { short: 'Consolidación en rango macro.', mid: 'Ruptura de máximos por expansión M2.', long: 'Objetivo de ciclo cumpliendo Ley de Potencias.' } },
-            sol: { id: 'sol', list: 'alpha', tierReq: 2, fullFree: false, symbol: 'SOL', name: 'Solana', narrative: 'L1 High-Throughput / Monolithic', verdict: 'Strong Buy', apiSymbol: 'SOLUSDT', projMuls: [1.15, 1.54, 2.45], advMetrics: { sharpe: "2.14", beta: "1.65", whales: "+12.8%", rr: "1:5.2" }, thesis: 'Dominancia absoluta. Es la red elegida por corporaciones para micropagos debido a su velocidad sin latencia.', tech: ['Actualización Firedancer a punto de procesar 1M TPS.', 'Composabilidad sincrónica perfecta.', '100% uptime en los últimos 12 meses.'], onchain: ['Flujo neto masivo de salida de Ethereum hacia Solana.', 'DEX procesan más volumen que Uniswap L1.', 'Billeteras institucionales acumulando.'], macro: ['ETFs globales comenzarán a añadir Solana.', 'Entorno de tasas bajas favorece adopción.', 'Liquidez entrando al ecosistema tradicional.'], tokenomics: ['Inflación reduciéndose.', 'Mecanismo de quema offsetea emisión.', 'Bajo riesgo de venta de equipo.'], security: ['Auditorías múltiples completadas.', 'QUIC mitigó ataques botnets.', 'Descentralización en aumento.'], adoption: ['Integración con pasarelas TradFi.', 'Elegida base para DePIN.', 'Ecosistema NFT fuerte.'], projections: { short: 'Catalizadores inminentes por airdrops.', mid: 'Impacto de adopción de stablecoins.', long: 'Captura de mercado hacia TradFi.' } },
-            rndr: { id: 'rndr', list: 'alpha', tierReq: 2, fullFree: false, symbol: 'RENDER', name: 'Render', narrative: 'DePIN / Computación Descentralizada IA', verdict: 'Strong Buy', apiSymbol: 'RENDERUSDT', projMuls: [1.25, 1.8, 3.2], advMetrics: { sharpe: "2.45", beta: "1.95", whales: "+18.4%", rr: "1:6.5" }, thesis: 'Monopolio en GPU rendering. La IA demanda potencia y Render es la infraestructura indispensable.', tech: ['Migración a Solana para microtransacciones.', 'Nodos adaptados para Machine Learning.', 'Arquitectura altamente escalable.'], onchain: ['Crecimiento del 340% interanual en red.', 'Ballenas de Silicon Valley acumulando.', 'Holders a largo plazo no venden.'], macro: ['Boom global de IA dispara demanda.', 'Escasez de chips Nvidia.', 'Rotación hacia infraestructura física.'], tokenomics: ['Modelo Burn-Mint deflacionario.', 'Uso corporativo quema supply.', 'Sin presión de venta de VCs.'], security: ['Verificación de nodos previene código malicioso.', 'Migración redujo riesgos de exploits.', 'Castigo para operadores ineficientes.'], adoption: ['Uso por estudios de Hollywood.', 'Alianzas con gigantes de hardware.', 'Integración en IA espacial AR/VR.'], projections: { short: 'Ruptura impulsada por noticias tech.', mid: 'Shock de oferta BME.', long: 'Captura del sector render global.' } },
-            ondo: { id: 'ondo', list: 'alpha', tierReq: 3, fullFree: false, symbol: 'ONDO', name: 'Ondo Finance', narrative: 'Real World Assets (RWA)', verdict: 'Buy', apiSymbol: 'ONDOUSDT', projMuls: [1.18, 1.6, 2.8], advMetrics: { sharpe: "1.92", beta: "1.20", whales: "+9.1%", rr: "1:4.8" }, thesis: 'Puente regulatorio más seguro entre bonos del Tesoro EE.UU. y DeFi. Liquidez institucional garantizada.', tech: ['Smart contracts auditados nivel institucional.', 'Estructura multi-firma y multi-custodia.', 'Interoperabilidad nativa en Ethereum y Polygon.'], onchain: ['Crecimiento exponencial de TVL en OUSG.', 'Profundidad de mercado sustancial en DEX.', 'Fondos de inversión inyectando capital constante.'], macro: ['Tasas de interés globales impulsan yield estable.', 'Bancos exploran tokenización a través de Ondo.', 'Regulación clara beneficia a emisores de RWA.'], tokenomics: ['Presión de venta absorbida por OTC spot.', 'Distribución de tokens orientada a gobernanza.', 'Captura de valor real a través de fees.'], security: ['Custodia de activos con entidades reguladas EE.UU.', 'Transparencia de reservas on-chain en tiempo real.', 'Cero exposición a préstamos sin garantía.'], adoption: ['Integración masiva en protocolos de lending.', 'Tesoros de DAOs usando Ondo para proteger liquidez.', 'Asociaciones con Layer 1s para liquidez nativa.'], projections: { short: 'Rechazo exitoso de soporte VWAP.', mid: 'Rotación hacia yields tokenizados atrae capital.', long: 'Tokenización masiva del mercado de bonos global.' } },
-            tao: { id: 'tao', list: 'alpha', tierReq: 3, fullFree: false, symbol: 'TAO', name: 'Bittensor', narrative: 'AI Descentralizada', verdict: 'Strong Buy', apiSymbol: 'TAOUSDT', projMuls: [1.12, 1.6, 3.5], advMetrics: { sharpe: "2.88", beta: "2.10", whales: "+22.5%", rr: "1:8.0" }, thesis: 'El protocolo Yuma Consensus crea un mercado libre de IA que rivaliza con gigantes de Silicon Valley.', tech: ['Consenso de inteligencia evaluando subredes.', 'Recompensa algoritmos eficientes.', 'Crecimiento de subredes especializadas.'], onchain: ['Oferta flotante extremadamente baja.', 'Mineros haciendo staking.', 'Acumulación institucional en secundario.'], macro: ['Valuaciones millonarias en IA.', 'Inversores buscan alternativas open-source.', 'Sector IA resiliente a caídas macro.'], tokenomics: ['Límite matemático de 21 millones.', 'Emisión justa sin pre-minado.', 'Recompensas divididas.'], security: ['Mecanismos robustos contra gaming.', 'Descentralización global.', 'Auditorías constantes.'], adoption: ['Desarrolladores migrando de Web2.', 'Fondos especializados comprando.', 'Integración en apps de consumidor.'], projections: { short: 'Test de resistencias.', mid: 'Adopción de subredes para análisis predictivo.', long: 'Especulación masiva sobre la AGI.' } },
-            eth: { id: 'eth', list: 'alpha', tierReq: 3, fullFree: false, symbol: 'ETH', name: 'Ethereum', narrative: 'L1 Smart Contracts', verdict: 'Buy', apiSymbol: 'ETHUSDT', projMuls: [1.05, 1.2, 1.6], advMetrics: { sharpe: "1.65", beta: "1.15", whales: "+2.1%", rr: "1:3.0" }, thesis: 'La capa base inamovible de las finanzas descentralizadas, actuando como el "bono de internet".', tech: ['Actualizaciones EIP reduciendo costos de Rollups.', 'Máquina Virtual (EVM) es el estándar universal.', 'Robustez arquitectónica tras años en vivo.'], onchain: ['ETH bloqueado masivamente en Staking/Restaking.', 'Suministro deflacionario bajo estrés de red.', 'Líder indiscutible en TVL y valor de Stablecoins.'], macro: ['Instituciones comprando para rendimiento nativo.', 'Narrativa sólida frente a reguladores globales.', 'Ecosistema L2 actuando como motor económico.'], tokenomics: ['EIP-1559 quema ETH con cada transacción.', 'Tasa de emisión actual muy cercana a cero.', 'Activo de capital, consumo y reserva de valor.'], security: ['Red Proof-of-Stake más segura del mundo.', 'Ecosistema de seguridad y bounties insuperable.', 'Client diversity previene caídas sistémicas.'], adoption: ['BlackRock usando ETH para tokenización.', 'Miles de aplicaciones dependientes de su seguridad.', 'Estándar global para DeFi corporativo.'], projections: { short: 'Aumento de comisiones por actividad on-chain.', mid: 'Shock de demanda provocado por Restaking.', long: 'Captura de trillones institucionales.' } },
-            near: { id: 'near', list: 'alpha', tierReq: 3, fullFree: false, symbol: 'NEAR', name: 'Near Protocol', narrative: 'Chain Abstraction / AI', verdict: 'Buy', apiSymbol: 'NEARUSDT', projMuls: [1.15, 1.4, 2.5], advMetrics: { sharpe: "1.90", beta: "1.45", whales: "+7.5%", rr: "1:4.2" }, thesis: 'Resuelve la fragmentación UX de cripto y se posiciona líder en transacciones impulsadas por IA.', tech: ['Nightshade Sharding permite escalabilidad infinita.', 'Chain Signatures unifica saldos de blockchains.', 'Latencia inferior a 2 segundos por bloque.'], onchain: ['Top 3 en usuarios activos (DAUs).', 'DApps sociales e IA disparando transacciones.', 'Retención de desarrolladores en máximos.'], macro: ['El mercado premia protocolos con adopción real.', 'Transición Web2 a Web3 requiere abstracción.', 'Narrativas duales (L1 e IA) protegen cartera.'], tokenomics: ['Inflación controloada y compensada por tarifas.', 'Suministro circulante distribuido ampliamente.', 'Costos de almacenamiento generan compras.'], security: ['Mecanismos contra ataques cross-shard.', 'Equipo de clase mundial liderando el código.', 'Auditorías estructurales recurrentes.'], adoption: ['Asociaciones con aplicaciones Web2.', 'Base de usuarios en mercados emergentes.', 'Crecimiento de ecosistema DeFi.'], projections: { short: 'Volumen en DEXs impulsando métricas.', mid: 'Lanzamiento de Chain Signatures.', long: 'Captura del usuario Web2 promedio.' } },
-            link: { id: 'link', list: 'alpha', tierReq: 3, fullFree: false, symbol: 'LINK', name: 'Chainlink', narrative: 'Infraestructura / Oráculos', verdict: 'Buy', apiSymbol: 'LINKUSDT', projMuls: [1.15, 1.4, 2.2], advMetrics: { sharpe: "1.75", beta: "1.10", whales: "+5.3%", rr: "1:3.8" }, thesis: 'Infraestructura crítica que permite a los bancos conectar sistemas heredados con blockchain.', tech: ['Estándar TCP/IP para interconexión bancaria.', 'Oráculos inmanipulables asegurando billones.', 'Integraciones multi-chain sin rival.'], onchain: ['Asegurando el 70% del valor DeFi.', 'Demanda de datos inelástica.', 'Acumulación sostenida por Smart Money.'], macro: ['Tokenización de SWIFT requiere esta infraestructura.', 'Instituciones necesitan oráculos confiables.', 'Sector TradFi aportando flujos masivos.'], tokenomics: ['Economía 2.0 mejora captura de valor.', 'Staking retira liquidez circulante.', 'Aumento de fees generados por red.'], security: ['Cero hacks críticos a nivel protocolo.', 'Redes de nodos altamente descentralizadas.', 'Consenso híbrido off-chain.'], adoption: ['Monopolio virtual en Oráculos.', 'Pruebas de concepto con bancos centrales.', 'DApps top dependen de sus feeds.'], projections: { short: 'Movimiento lateral sólido en acumulación.', mid: 'Anuncios de integración con bancos.', long: 'Retorno a valuaciones por RWA.' } },
-            sui: { id: 'sui', list: 'alpha', tierReq: 3, fullFree: false, symbol: 'SUI', name: 'Sui Network', narrative: 'Alt-L1 / Paralelización', verdict: 'Strong Buy', apiSymbol: 'SUIUSDT', projMuls: [1.2, 1.7, 3.1], advMetrics: { sharpe: "2.15", beta: "1.80", whales: "+14.2%", rr: "1:5.5" }, thesis: 'El L1 más rápido basado en lenguaje Move, absorbiendo TVL masivo de redes obsoletas.', tech: ['Ejecución de transacciones en paralelo.', 'Lenguaje Move: más seguro y expresivo.', 'Escalabilidad añadiendo más máquinas.'], onchain: ['Explosión parabólica en TVL.', 'Volumen DEX superando redes antiguas.', 'Entrada masiva de nuevos usuarios (DAUs).'], macro: ['El mercado busca el próximo Solana.', 'Liquidez macro favorece L1 agresivos.', 'Fuerte respaldo de VCs asiáticos.'], tokenomics: ['Desbloqueos absorbidos por demanda.', 'Tasas baratas incentivan alto volumen.', 'Incentivos agresivos para constructores.'], security: ['Diseño Object-centric elimina vectores EVM.', 'Comprobación de tipos por compilador.', 'Auditado por equipos ex-Meta.'], adoption: ['Asociaciones clave en sector Gaming.', 'Migración de desarrolladores de otras cadenas.', 'Integraciones con telecomunicaciones.'], projections: { short: 'Ruptura de resistencias por TVL récord.', mid: 'Inyección de capital masivo vía DeFi.', long: 'Consolidación como red Top 5 en volumen.' } },
-            avax: { id: 'avax', list: 'alpha', tierReq: 3, fullFree: false, symbol: 'AVAX', name: 'Avalanche', narrative: 'AppChains / Tokenización', verdict: 'Buy', apiSymbol: 'AVAXUSDT', projMuls: [1.12, 1.5, 2.4], advMetrics: { sharpe: "1.80", beta: "1.35", whales: "+6.8%", rr: "1:4.0" }, thesis: 'La red elegida por Wall Street para crear blockchains privadas. Velocidad sub-segundo.', tech: ['Subnets permiten blockchains personalizables.', 'Consenso finaliza transacciones casi instantáneas.', 'Alta compatibilidad EVM con C-Chain.'], onchain: ['Instituciones probando Subnets corporativas.', 'Volumen estable a pesar de fluctuaciones.', 'Comunidad de validadores comprometida.'], macro: ['JPMorgan y CitiGroup usando su tecnología.', 'Tendencia corporativa hacia blockchains privadas.', 'Expansión hacia mercado de juegos Web3.'], tokenomics: ['Suministro máximo fijado (Capped Supply).', 'Quema continua de comisiones.', 'Staking ratio alto.'], security: ['Consenso tolerante a fallos.', 'Subnets aisladas previenen fallos sistémicos.', 'Protecciones contra ataques Sybil.'], adoption: ['Liderazgo en adopción empresarial.', 'Editoriales de videojuegos lanzando Subnets.', 'Soporte a desarrolladores Tier-1.'], projections: { short: 'Recuperación apoyada por anuncios institucionales.', mid: 'Crecimiento de TVL en Subnets activas.', long: 'Valoración impulsada por migración TradFi.' } },
-
-            ada: { id: 'ada', list: 'omega', tierReq: 1, fullFree: true, symbol: 'ADA', name: 'Cardano', narrative: 'Ghost Chain / Legacy L1', verdict: 'Strong Sell', apiSymbol: 'ADAUSDT', projMuls: [0.95, 0.8, 0.5], advMetrics: { sharpe: "-0.85", beta: "0.90", whales: "-14.5%", rr: "1:1.2" }, thesis: 'Blockchain fantasma. Alta capitalización sostenida por marketing, sin uso real, ni TVL, ni adopción.', tech: ['Modelo eUTXO ineficiente.', 'Lentitud de desarrollo extrema.', 'Lenguaje Plutus aleja desarrolladores.'], onchain: ['Genera menos de $15,000 al día en comisiones.', 'TVL minúsculo frente a su valoración.', 'Salida constante de capital a ecosistemas modernos.'], macro: ['Fondos institucionales sin exposición a ADA.', 'Narrativa ignorada por el mercado.', 'Falta total de catalizadores macroeconómicos.'], tokenomics: ['Alta dilución por recompensas.', 'Ratio MCAP/TVL astronómico.', 'Inflación continua de oferta.'], security: ['Segura, pero falta de uso la hace irrelevante.', 'Baja densidad de nodos corporativos.', 'Riesgo de abandono.'], adoption: ['Cero integraciones con protocolos DeFi top.', 'Nula tracción en NFT o Gaming.', 'Usuarios son especuladores, no usuarios reales.'], projections: { short: 'Pérdida de soporte clave.', mid: 'Cascada de ventas retail.', long: 'Degradación lenta hacia la irrelevancia.' } },
-            wld: { id: 'wld', list: 'omega', tierReq: 2, fullFree: false, symbol: 'WLD', name: 'Worldcoin', narrative: 'Trampa Liquidez (High FDV)', verdict: 'Strong Sell', apiSymbol: 'WLDUSDT', projMuls: [0.85, 0.65, 0.4], advMetrics: { sharpe: "-1.45", beta: "1.80", whales: "-28.4%", rr: "1:0.8" }, thesis: 'El caso más extremo de tokenomics tóxicos. Presión de venta por VCs destruirá el capital retail.', tech: ['Escaneo de iris genera rechazo global.', 'Dependencia centralizada de hardware.', 'L2 sin innovación real.'], onchain: ['Menos del 3% del suministro circulando.', 'Transferencias dominadas por cobro de Airdrops.', 'Sin demanda orgánica de compra.'], macro: ['Países prohibiendo escaneo de iris.', 'Escenario regulatorio hostil.', 'Narrativa de IA usada falsamente.'], tokenomics: ['Valoración Diluida astronómica.', 'Desbloqueo agresivo para inversores tempranos.', 'Sin utilidad real.'], security: ['Riesgos masivos de almacenamiento biométrico.', 'Hardware vulnerable.', 'Auditorías señalan centralización.'], adoption: ['Usuarios escaneados solo por recompensa.', 'Prohibiciones destruyen potencial.', 'DApps no exigen WLD.'], projections: { short: 'Desangramiento constante.', mid: 'Colapso cuando VCs vendan.', long: 'Caída del 80%+ desde precios actuales.' } },
-            xlm: { id: 'xlm', list: 'omega', tierReq: 2, fullFree: false, symbol: 'XLM', name: 'Stellar', narrative: 'Tecnología Obsoleta', verdict: 'Sell', apiSymbol: 'XLMUSDT', projMuls: [0.98, 0.85, 0.6], advMetrics: { sharpe: "-0.65", beta: "0.85", whales: "-8.2%", rr: "1:1.5" }, thesis: 'Completamente reemplazado. Stablecoins nativas en redes modernas hacen que XLM sea inútil.', tech: ['Cero innovación en años.', 'Incapaz de albergar DeFi complejo.', 'Velocidad superada por L1 modernos.'], onchain: ['Volumen diario generado por bots.', 'Flujos institucionales negativos.', 'Direcciones activas estancadas.'], macro: ['Narrativa de moneda para bancos fracasó.', 'Cero menciones en reportes modernos.', 'Expulsada de canastas institucionales.'], tokenomics: ['Fundación retiene alto porcentaje.', 'Inflación artificial.', 'Baja liquidez fiat.'], security: ['Historial de caídas centralizadas.', 'Pocos validadores independientes.', 'Riesgo de centralización.'], adoption: ['Asociaciones antiguas no materializadas.', 'Cero presencia en stablecoins.', 'Comunidad de desarrolladores inexistente.'], projections: { short: 'Oscilación lateral sin catalizadores.', mid: 'Pérdida en ranking de capitalización.', long: 'Rendimiento inferior al mercado.' } },
-            etc: { id: 'etc', list: 'omega', tierReq: 3, fullFree: false, symbol: 'ETC', name: 'Ethereum Classic', narrative: 'Zombie Chain', verdict: 'Strong Sell', apiSymbol: 'ETCUSDT', projMuls: [0.95, 0.8, 0.55], advMetrics: { sharpe: "-1.10", beta: "1.20", whales: "-18.5%", rr: "1:1.0" }, thesis: 'Red mantenida viva por mineros residuales especulando. Sin ecosistema, usuarios o futuro.', tech: ['Negativa a actualizar la mantiene en 2016.', 'PoW ineficiente y contaminante.', 'Cero herramientas modernas.'], onchain: ['Menos de 20 devs activos.', 'TVL en todo su ecosistema es $0.', 'Transacciones vacías generadas por minería.'], macro: ['Abandono del PoW por mundo corporativo ESG.', 'Ausencia total de narrativa de ciclo.', 'Presión macro ambiental en su contra.'], tokenomics: ['Venta infinita de mineros para pagar luz.', 'Sin mecanismos de quema.', 'Sin utilidad que obligue a retener.'], security: ['Ha sufrido múltiples ataques del 51%.', 'Seguridad computacional frágil.', 'Desconfianza de exchanges para depósitos.'], adoption: ['Proyectos se niegan a desplegar ahí.', 'Aceptación nula como medio de pago.', 'Cero innovación en NFTs o DAOs.'], projections: { short: 'Ventas de mineros aplastando repuntes.', mid: 'Pérdida inminente de soporte histórico.', long: 'Obsolescencia técnica total.' } },
-            eos: { id: 'eos', list: 'omega', tierReq: 3, fullFree: false, symbol: 'EOS', name: 'EOS', narrative: 'Proyecto Fallido', verdict: 'Sell', apiSymbol: 'EOSUSDT', projMuls: [0.98, 0.88, 0.7], advMetrics: { sharpe: "-0.75", beta: "0.95", whales: "-12.0%", rr: "1:1.3" }, thesis: 'El ICO multimillonario que entregó una red centralizada sin usuarios. Considerado dinero muerto.', tech: ['Modelo de delegados derivó en cárteles.', 'Requerimiento de RAM arruinó la UX.', 'Desarrollo del núcleo paralizado.'], onchain: ['TVL ha colapsado a mínimos históricos.', 'Transacciones son spam automatizado.', 'Salida de DApps hacia L2s de Ethereum.'], macro: ['Asociado al mayor fracaso ICO.', 'Ausente de debates de innovación Web3.', 'Falta de interés de fondos Tier-1.'], tokenomics: ['Alta inflación inicial destruyó valor.', 'Capital bloqueado en tesorerías.', 'Presión de venta estructural continua.'], security: ['Bloqueos de fondos destruyeron inmutabilidad.', 'Cárteles de validadores coludiendo.', 'Arquitectura propensa a monopolios.'], adoption: ['Ningún juego o DeFi importante lo usa.', 'Comunidad Dev migró a Solana/EVM.', 'Deslistado de plataformas institucionales.'], projections: { short: 'Tendencia bajista ininterrumpida.', mid: 'Incapacidad para captar liquidez.', long: 'Pérdida total de estatus Top Crypto.' } },
-            algo: { id: 'algo', list: 'omega', tierReq: 3, fullFree: false, symbol: 'ALGO', name: 'Algorand', narrative: 'Buen Tech, Sin Usuarios', verdict: 'Sell', apiSymbol: 'ALGOUSDT', projMuls: [0.95, 0.85, 0.75], advMetrics: { sharpe: "-0.90", beta: "1.10", whales: "-9.5%", rr: "1:1.4" }, thesis: 'Tecnología brillante destruida por pésima gestión corporativa e inflación que masacró inversores.', tech: ['Consenso hermoso pero inútil sin adopción.', 'Falta de compatibilidad EVM aisló la red.', 'Velocidad superada por SUI y Aptos.'], onchain: ['TVL estancado, incapaz de superar $200M.', 'Actividad en constante declive.', 'DEXs nativos sin liquidez (slippage).'], macro: ['Golpeado por acciones de la SEC.', 'Instituciones huyendo del riesgo regulatorio.', 'Incapacidad de atraer capital fresco.'], tokenomics: ['Peores Tokenomics (Accelerated Vesting).', 'Dilución monstruosa por la Fundación.', 'Retail usado como exit liquidity.'], security: ['Segura, pero nodos relés centralizados.', 'Imposibilidad de nodos principales para retail.', 'Ecosistema de seguridad muy cerrado.'], adoption: ['Asociaciones rimbombantes sin transacciones.', 'Ecosistema DeFi minúsculo y fragmentado.', 'Ninguna adopción en RWA real.'], projections: { short: 'Incapaz de seguir rallies del mercado.', mid: 'Miedo regulatorio alejará smart money.', long: 'Falta de TVL condena a irrelevancia.' } },
-            fil: { id: 'fil', list: 'omega', tierReq: 3, fullFree: false, symbol: 'FIL', name: 'Filecoin', narrative: 'Almacenamiento No Usado', verdict: 'Sell', apiSymbol: 'FILUSDT', projMuls: [0.96, 0.85, 0.65], advMetrics: { sharpe: "-1.05", beta: "1.30", whales: "-15.2%", rr: "1:1.1" }, thesis: 'Nadie usa Filecoin para Web3 real. Mineros venden agresivamente para cubrir costos de hardware.', tech: ['Complejidad técnica excesiva.', 'Costos de nodos altísimos y no rentables.', 'Contratos inteligentes llegaron años tarde.'], onchain: ['Datos guardados son basura subsidiada.', 'Ingresos de red ínfimos frente a emisión.', 'Caída libre en retención de usuarios.'], macro: ['AWS y Cloudflare siguen dominando.', 'IA prefiere GPUs, no discos duros fríos.', 'Falta de interés de capital de riesgo.'], tokenomics: ['Emisión masiva para subsidiar capacidad.', 'Mineros atrapados vendiendo constantemente.', 'Bloqueos de capital ineficientes.'], security: ['Pruebas seguras pero pesadas.', 'Centralización por barrera de entrada.', 'Penalizaciones duras a pequeños operadores.'], adoption: ['Empresas rehúsan usarlo por lentitud.', 'Sin integración nativa con DApps.', 'Estancada en nichos hiper-específicos.'], projections: { short: 'Presión vendedora controla precio.', mid: 'Falta de demanda evitará repuntes.', long: 'Dilución continua aplastará retornos.' } },
-            apt: { id: 'apt', list: 'omega', tierReq: 3, fullFree: false, symbol: 'APT', name: 'Aptos', narrative: 'Inflación VC Extrema', verdict: 'Strong Sell', apiSymbol: 'APTUSDT', projMuls: [0.92, 0.7, 0.45], advMetrics: { sharpe: "-1.60", beta: "1.75", whales: "-32.1%", rr: "1:0.7" }, thesis: 'Proyecto controlado 100% por Capital Riesgo listo para descargar monedas sobre el inversor minorista.', tech: ['Lenguaje Move es bueno, compite en océano rojo.', 'Falta de innovación que justifique billones.', 'Validadores centralizados.'], onchain: ['Métricas manipuladas por Airdrops.', 'Bajísimo número de usuarios reales (DAUs).', 'Falta de liquidez profunda en DeFi.'], macro: ['VCs necesitan liquidez y usarán este token.', 'Narrativa desgastada de "Asesino de Solana".', 'Mercado saturado de L1s.'], tokenomics: ['Desbloqueos inyectarán millones al mercado.', 'FDV astronómicamente tóxica.', 'Retail tiene menos del 5% del suministro.'], security: ['Validación centralizada.', 'Pocas auditorías profundas.', 'Inmutabilidad cuestionable.'], adoption: ['Ninguna aplicación revolucionaria.', 'Usuarios abandonan al terminar incentivos.', 'Ausente de integraciones empresariales.'], projections: { short: 'Rebotes falsos para atrapar liquidez.', mid: 'Colapso bajo peso de desbloqueos.', long: 'Destrucción masiva de valor (FDV).' } },
-            jasmy: { id: 'jasmy', list: 'omega', tierReq: 3, fullFree: false, symbol: 'JASMY', name: 'JasmyCoin', narrative: 'Proyecto Abandonado', verdict: 'Strong Sell', apiSymbol: 'JASMYUSDT', projMuls: [0.85, 0.6, 0.3], advMetrics: { sharpe: "-2.10", beta: "2.50", whales: "-45.0%", rr: "1:0.5" }, thesis: 'Falsa narrativa IoT japonesa. El equipo vendió agresivamente sin entregar productos tecnológicos.', tech: ['Arquitectura básica sin avances en IoT.', 'No hay infraestructura descentralizada.', 'Dependencia de servidores centralizados.'], onchain: ['Carteras del equipo han vaciado reservas.', 'Volumen de transacciones on-chain nulo.', 'Volumen solo en especulación de Binance.'], macro: ['Cero impacto corporativo en Japón.', 'Reguladores endureciendo normas.', 'Desconexión total de narrativas (DePIN).'], tokenomics: ['Dilución que destruyó el 99% del precio.', 'Sin utilidad real de compra.', 'Oferta masiva y flotante perpetua.'], security: ['Riesgos de Rug Pull por admin.', 'Contratos no auditados por top tiers.', 'Cero transparencia corporativa.'], adoption: ['Asociaciones japonesas irrelevantes.', 'Ningún fabricante ha implementado su chip.', 'Pérdida total de credibilidad.'], projections: { short: 'Volatilidad controlada por bots.', mid: 'Incapacidad de mantener soportes.', long: 'Riesgo inminente de deslistado.' } },
-            ltc: { id: 'ltc', list: 'omega', tierReq: 3, fullFree: false, symbol: 'LTC', name: 'Litecoin', narrative: 'Antigüedad Sin Uso', verdict: 'Sell', apiSymbol: 'LTCUSDT', projMuls: [0.98, 0.9, 0.75], advMetrics: { sharpe: "-0.50", beta: "0.80", whales: "-5.4%", rr: "1:1.8" }, thesis: 'La "plata digital" ha perdido su narrativa frente al uso institucional de BTC y L2s.', tech: ['Copia de código de Bitcoin.', 'Velocidad transaccional no competitiva.', 'Actualización de privacidad lo bloqueó en Asia.'], onchain: ['Usado solo para envíos baratos.', 'Carteras no muestran acumulación.', 'Desinterés de ballenas, solo bots.'], macro: ['Instituciones consolaron a BTC como almacén.', 'ETFs rechazaron considerar este activo.', 'Falta de narrativa propia.'], tokenomics: ['Mineros volcando oferta incesantemente.', 'Sin mecanismos para bloquear valor (TVL).', 'Su halving demostró ser irrelevante.'], security: ['Perdiendo Hashrate frente a BTC.', 'Vulnerable si pools deciden atacarla.', 'Sin desarrollo activo de seguridad.'], adoption: ['Excluido de DeFi moderno.', 'Ningún Smart Contract, NFT o utilidad real.', 'Pérdida de integraciones en pasarelas.'], projections: { short: 'Sangría lenta frente a Bitcoin.', mid: 'Rotación de capital hacia L1s modernos.', long: 'Expulsión definitiva del Top 30 global.' } }
+          "btc": { "id": "btc", "list": "alpha", "tierReq": 1, "fullFree": true, "symbol": "BTC", "name": "Bitcoin", "narrative": "Reserva de Valor", "verdict": "Strong Buy", "apiSymbol": "BTCUSDT", "projMuls": [1.05, 1.15, 1.30], "advMetrics": { "sharpe": "2.10", "beta": "0.95", "whales": "+3.4%", "rr": "1:3.2" }, "thesis": "Acumulación masiva y absorción de venta institucional brindan piso estructural profundo.", "tech": ["Tendencia de acumulación confirmada."], "onchain": ["Flujo de salida estable en mineros."], "macro": ["Condiciones macroeconómicas descontadas."], "tokenomics": ["Suministro fijo post-halving."], "security": ["Hashrate en máximos."], "adoption": ["Flujos constantes en ETFs."], "projections": { "short": "Recuperación a $82K", "mid": "Ruptura eventual de $90K", "long": "Aceleración a $100K+" } },
+          "sol": { "id": "sol", "list": "alpha", "tierReq": 2, "fullFree": false, "symbol": "SOL", "name": "Solana", "narrative": "Alt-L1 Monolítica", "verdict": "Buy", "apiSymbol": "SOLUSDT", "projMuls": [1.10, 1.25, 1.60], "advMetrics": { "sharpe": "1.75", "beta": "1.60", "whales": "+1.8%", "rr": "1:2.5" }, "thesis": "Fuerte retención de TVL e influjos institucionales la consolidan como capa de ejecución predominante.", "tech": ["Mínimos más altos respetados."], "onchain": ["Volúmenes sostenidos en DEX."], "macro": ["Interés corporativo en ETFs."], "tokenomics": ["Inflación absorbida por crecimiento."], "security": ["Uptime consistente."], "adoption": ["Integraciones con Web2."], "projections": { "short": "Recuperación sobre $90", "mid": "Ascensión hacia $120", "long": "Equivalente al Nasdaq en blockchain" } },
+          "rndr": { "id": "rndr", "list": "alpha", "tierReq": 2, "fullFree": false, "symbol": "RNDR", "name": "Render", "narrative": "DePIN / GPU Compute", "verdict": "Buy", "apiSymbol": "RNDRUSDT", "projMuls": [1.10, 1.30, 1.70], "advMetrics": { "sharpe": "1.95", "beta": "1.15", "whales": "+1.5%", "rr": "1:2.4" }, "thesis": "Servicio esencial en déficit de chips, operando como mercado descentralizado de GPU.", "tech": ["Valoración estructural mantenida."], "onchain": ["Baja dominancia especulativa."], "macro": ["Tensión de oferta en hardware NVIDIA."], "tokenomics": ["Burn-and-Mint activo."], "security": ["Migración superada."], "adoption": ["Casos de uso comercial creciendo."], "projections": { "short": "Consolidación sobre $1.80", "mid": "Crecimiento gradual corporativo", "long": "Centro neuronal de procesamiento Web3" } },
+          "hype": { "id": "hype", "list": "alpha", "tierReq": 3, "fullFree": false, "symbol": "HYPE", "name": "Hyperliquid", "narrative": "Perps DEX", "verdict": "Strong Buy", "apiSymbol": "HYPEUSDT", "projMuls": [1.25, 1.55, 2.10], "advMetrics": { "sharpe": "2.85", "beta": "1.30", "whales": "+8.2%", "rr": "1:4.5" }, "thesis": "Dominio de mercado pre-OPI perpetuos con tokenómica deflacionaria histórica.", "tech": ["Ruptura de canal alcista."], "onchain": ["Volumen L1 acelerado."], "macro": ["Expansión liquidez L1."], "tokenomics": ["Quema masiva elimina presión."], "security": ["Auditorías limpias."], "adoption": ["Atracción de liquidez institucional."], "projections": { "short": "Rompimiento hacia $55", "mid": "Expansión al rango $71", "long": "Liquidez base para IA" } },
+          "ada": { "id": "ada", "list": "omega", "tierReq": 1, "fullFree": true, "symbol": "ADA", "name": "Cardano", "narrative": "Alt-L1 Clásica", "verdict": "Strong Sell", "apiSymbol": "ADAUSDT", "projMuls": [0.90, 0.80, 0.65], "advMetrics": { "sharpe": "-1.50", "beta": "1.20", "whales": "-3.8%", "rr": "1:0.9" }, "thesis": "Apatía on-chain total y desconexión entre TVL funcional y valoración de mercado.", "tech": ["Ruptura a la baja de soportes."], "onchain": ["Ausencia de adopción volumétrica."], "macro": ["Pérdida narrativa fiduciaria."], "tokenomics": ["Oferta flotante asfixiante."], "security": ["Modelo seguro pero sin uso."], "adoption": ["Fracaso en migración Devs."], "projections": { "short": "Descenso hacia $0.23", "mid": "Caminata lateral eterna", "long": "Obsolescencia frente a VMs modernas" } },
+          "bch": { "id": "bch", "list": "omega", "tierReq": 2, "fullFree": false, "symbol": "BCH", "name": "Bitcoin Cash", "narrative": "Moneda de Pago", "verdict": "Sell", "apiSymbol": "BCHUSDT", "projMuls": [0.85, 0.75, 0.60], "advMetrics": { "sharpe": "-1.20", "beta": "1.85", "whales": "-4.5%", "rr": "1:0.8" }, "thesis": "Colapso severo del soporte macro histórico por cortos institucionales.", "tech": ["Caída destruyendo soportes."], "onchain": ["Reducción de carteras activas."], "macro": ["Rechazo frente a BTC."], "tokenomics": ["Dependencia minera sin adopción."], "security": ["Hashrate fraccionado."], "adoption": ["Falta integración moderna."], "projections": { "short": "Derrape hacia $350", "mid": "Incapacidad algorítmica de recuperación", "long": "Sangría en rankings globales" } },
+          "ltc": { "id": "ltc", "list": "omega", "tierReq": 2, "fullFree": false, "symbol": "LTC", "name": "Litecoin", "narrative": "Moneda de Pago", "verdict": "Strong Sell", "apiSymbol": "LTCUSDT", "projMuls": [0.85, 0.65, 0.45], "advMetrics": { "sharpe": "-1.35", "beta": "1.35", "whales": "-5.2%", "rr": "1:0.6" }, "thesis": "Asedio incesante de cortos con tasas negativas confirmando éxodo retail.", "tech": ["Deterioro continuo."], "onchain": ["Depresión sistemática."], "macro": ["Pérdida absoluta de interés."], "tokenomics": ["Carencia de tracción deflacionaria."], "security": ["Ineficiencia computacional."], "adoption": ["Marginación innegable."], "projections": { "short": "Visita al abismo de $45", "mid": "Estabilización dolorosa", "long": "Declinación paulatina al olvido" } },
+          "pyth": { "id": "pyth", "list": "omega", "tierReq": 3, "fullFree": false, "symbol": "PYTH", "name": "Pyth Network", "narrative": "Oráculos", "verdict": "Strong Sell", "apiSymbol": "PYTHUSDT", "projMuls": [0.75, 0.60, 0.40], "advMetrics": { "sharpe": "-2.10", "beta": "1.80", "whales": "-12.5%", "rr": "1:0.5" }, "thesis": "Choque de oferta colosal insalvable inminente destruyendo el mercado.", "tech": ["Ruptura a la baja general."], "onchain": ["Transferencias masivas salientes."], "macro": ["Debilidad agrava choques."], "tokenomics": ["Cliff Unlock catastrófico."], "security": ["Riesgo total de liquidez."], "adoption": ["Estructura no alinea incentivos."], "projections": { "short": "Implosión bajista vertical", "mid": "Descubrimiento de precios a la baja", "long": "Dificultad histórica de recuperación" } }
         };
 
         // =======================================================================
@@ -112,22 +101,10 @@
         const { useState, useEffect, useRef } = React;
 
         function App() {
-            // Helpers Globales Movidos al Componente (Evita el Error de Referencia)
-            const formatPrice = (p) => {
-                if(p === null || p === undefined) return 'Calculando...';
-                if(p === 0) return 'Error API';
-                return `$${Number(p).toLocaleString('en-US', {minimumFractionDigits: (p<1?4:2), maximumFractionDigits:(p<1?4:2)})}`;
-            };
-
-            // Estado con blindaje inicial
             const [cryptoData, setCryptoData] = useState(fallbackLocalData);
-            
-            // Estados Autenticación y Nivel
             const [user, setUser] = useState(null); 
-            // Si hay usuario logueado, es Nivel 2. Si su nombre dice VIP (o tiene etiqueta de pago), es Nivel 3.
             const currentTier = user ? (user.displayName === 'VIP' ? 3 : 2) : 1; 
             
-            // Estados UI
             const [activeTab, setActiveTab] = useState('alpha');
             const [selectedAssetKey, setSelectedAssetKey] = useState('btc'); 
             const [timeStr, setTimeStr] = useState('');
@@ -135,36 +112,30 @@
             const [tickerData, setTickerData] = useState([]);
             const [currentPrice, setCurrentPrice] = useState(null);
 
-            // Modales
             const [showAuthModal, setShowAuthModal] = useState(false);
             const [isLoginMode, setIsLoginMode] = useState(false);
             const [showVipModal, setShowVipModal] = useState(false);
             const [showProfileModal, setShowProfileModal] = useState(false); 
             
-            // Formulario Auth
             const [name, setName] = useState('');
             const [email, setEmail] = useState('');
             const [password, setPassword] = useState('');
+            const [confirmPassword, setConfirmPassword] = useState(''); // NUEVO: Confirmación
             const [phone, setPhone] = useState('');
             const [countryCode, setCountryCode] = useState('+52'); 
             const [authError, setAuthError] = useState('');
 
-            // Refs Gráficos
             const projChartRef = useRef(null);
             const compChartRef = useRef(null);
             const projChartInstance = useRef(null);
             const compChartInstance = useRef(null);
 
-            // BLINDAJE EXTREMO: Si Firebase falla o trae llaves rotas, siempre habrá un activo válido
             const safeCryptoData = Object.keys(cryptoData).length > 0 ? cryptoData : fallbackLocalData;
             const selectedAsset = safeCryptoData[selectedAssetKey] || safeCryptoData['btc'] || Object.values(safeCryptoData)[0];
-            
             const isProjectionsLocked = currentTier < 3 && !selectedAsset?.fullFree;
 
-            // Reloj y Firebase Listener
             useEffect(() => {
                 const t = setInterval(() => setTimeStr(new Date().toLocaleTimeString('es-ES', {timeZone: 'UTC'})), 1000);
-                
                 const today = new Date();
                 const nextUpdate = new Date(today);
                 nextUpdate.setDate(today.getDate() + ((1 + 7 - today.getDay()) % 7 || 7));
@@ -188,19 +159,17 @@
                     if(usr) setShowAuthModal(false);
                 });
 
-                // Lectura Firestore con protección
                 const unsubscribeDb = db.collection('portfolio').doc('current').onSnapshot((doc) => {
                     if (doc.exists && doc.data().assets && Object.keys(doc.data().assets).length > 0) {
                         setCryptoData(doc.data().assets);
                     }
                 }, (err) => {
-                    console.error("Error Firestore. Usando datos locales.", err);
+                    console.error("Error Firestore.", err);
                 });
 
                 return () => { clearInterval(t); unsubscribeAuth(); unsubscribeDb(); };
             }, []);
 
-            // Actualizar Precio en base al activo seleccionado
             useEffect(() => {
                 if(!selectedAsset?.apiSymbol) return;
                 setCurrentPrice(null); 
@@ -214,12 +183,10 @@
                         renderCompareChart(selectedAsset);
                     })
                     .catch(err => {
-                        console.error("Error API Binance", err);
                         setCurrentPrice(0);
                     });
             }, [selectedAssetKey, safeCryptoData]);
 
-            // Gráfico 1: Proyecciones
             const renderProjChart = (price, asset) => {
                 if(!projChartRef.current || !price || !asset?.projMuls) return;
                 if (projChartInstance.current) projChartInstance.current.destroy();
@@ -238,31 +205,15 @@
                     type: 'line',
                     data: {
                         labels: ['Actual', 'Corto Plazo', 'Medio Plazo', 'Largo Plazo'],
-                        datasets: [{
-                            data: [price, pShort, pMid, pLong],
-                            borderColor: isBuy ? '#f59e0b' : '#ef4444',
-                            backgroundColor: gradient,
-                            borderWidth: 4,
-                            pointBackgroundColor: '#0f172a',
-                            pointBorderColor: isBuy ? '#f59e0b' : '#ef4444',
-                            pointBorderWidth: 3,
-                            pointRadius: 6,
-                            fill: true,
-                            tension: 0.4
-                        }]
+                        datasets: [{ data: [price, pShort, pMid, pLong], borderColor: isBuy ? '#f59e0b' : '#ef4444', backgroundColor: gradient, borderWidth: 4, pointBackgroundColor: '#0f172a', pointBorderColor: isBuy ? '#f59e0b' : '#ef4444', pointBorderWidth: 3, pointRadius: 6, fill: true, tension: 0.4 }]
                     },
                     options: {
-                        responsive: true, maintainAspectRatio: false,
-                        plugins: { legend: { display: false } },
-                        scales: {
-                            y: { grid: { color: '#1e293b', drawBorder: false }, ticks: { color: '#64748b' } },
-                            x: { grid: { color: '#0f172a', drawBorder: false }, ticks: { color: '#94a3b8', font: {weight: 'bold'} } }
-                        }
+                        responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+                        scales: { y: { grid: { color: '#1e293b', drawBorder: false }, ticks: { color: '#64748b' } }, x: { grid: { color: '#0f172a', drawBorder: false }, ticks: { color: '#94a3b8', font: {weight: 'bold'} } } }
                     }
                 });
             };
 
-            // Gráfico 2: Fuerza Relativa
             const renderCompareChart = (asset) => {
                 if(!compChartRef.current || !asset?.advMetrics) return;
                 if (compChartInstance.current) compChartInstance.current.destroy();
@@ -276,15 +227,10 @@
 
                 for(let i=30; i>=0; i--) {
                     labels.push(`D-${i}`);
-                    let spMove = (Math.random() - 0.4) * 0.5;
-                    currentSp += spMove; spData.push(currentSp);
-                    
-                    let btcMove = spMove + ((Math.random() - 0.45) * 1.5);
-                    currentBtc += btcMove; btcData.push(currentBtc);
-
+                    let spMove = (Math.random() - 0.4) * 0.5; currentSp += spMove; spData.push(currentSp);
+                    let btcMove = spMove + ((Math.random() - 0.45) * 1.5); currentBtc += btcMove; btcData.push(currentBtc);
                     let alphaBias = isBuy ? (Math.random() * 0.5) : -(Math.random() * 0.5); 
-                    let assetMove = (btcMove * beta) + alphaBias;
-                    currentAsset += assetMove; assetData.push(currentAsset);
+                    let assetMove = (btcMove * beta) + alphaBias; currentAsset += assetMove; assetData.push(currentAsset);
                 }
 
                 compChartInstance.current = new Chart(ctx, {
@@ -298,43 +244,23 @@
                         ]
                     },
                     options: {
-                        responsive: true, maintainAspectRatio: false,
-                        interaction: { mode: 'index', intersect: false },
+                        responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
                         plugins: { legend: { position: 'top', labels: { color: '#cbd5e1', font: {family: "'JetBrains Mono'", size: 10} } } },
-                        scales: {
-                            y: { display: true, title: {display: true, text: '% Rendimiento', color: '#64748b'}, grid: { color: '#1e293b' }, ticks: { color: '#64748b' } },
-                            x: { display: false, grid: { display: false } }
-                        }
+                        scales: { y: { display: true, grid: { color: '#1e293b' }, ticks: { color: '#64748b' } }, x: { display: false, grid: { display: false } } }
                     }
                 });
-            };
-
-            const renderMetricExplanation = (type, value) => {
-                if(!value) return null;
-                if (type === 'sharpe') {
-                    const v = parseFloat(value);
-                    if (v >= 1.5) return <ul className="mt-3 text-[10px] text-slate-400 list-disc pl-3 space-y-1"><li><span className="text-green-400 font-bold">Excelente:</span> Supera el benchmark.</li><li>El retorno justifica ampliamente el riesgo asumido.</li></ul>;
-                    if (v >= 1) return <ul className="mt-3 text-[10px] text-slate-400 list-disc pl-3 space-y-1"><li><span className="text-blue-400 font-bold">Bueno:</span> Riesgo moderado.</li><li>Atractivo para institucionales.</li></ul>;
-                    return <ul className="mt-3 text-[10px] text-slate-400 list-disc pl-3 space-y-1"><li><span className="text-red-400 font-bold">Peligroso:</span> Alta volatilidad.</li><li>El riesgo no compensa la ganancia esperada.</li></ul>;
-                }
-                if (type === 'beta') {
-                    const v = parseFloat(value);
-                    if (v >= 1.5) return <ul className="mt-3 text-[10px] text-slate-400 list-disc pl-3 space-y-1"><li><span className="text-amber-500 font-bold">Agresivo:</span> Alta divergencia.</li><li>Amplifica movimientos de BTC. Ganancias rápidas.</li></ul>;
-                    if (v >= 1) return <ul className="mt-3 text-[10px] text-slate-400 list-disc pl-3 space-y-1"><li><span className="text-blue-400 font-bold">Moderado:</span> Sincronizado.</li><li>Fluye a la par del mercado general (Beta 1).</li></ul>;
-                    return <ul className="mt-3 text-[10px] text-slate-400 list-disc pl-3 space-y-1"><li><span className="text-slate-300 font-bold">Defensivo:</span> Baja volatilidad.</li><li>Útil como cobertura ante caídas macro.</li></ul>;
-                }
-                if (type === 'whales') {
-                    if (value.includes('+')) return <ul className="mt-3 text-[10px] text-slate-400 list-disc pl-3 space-y-1"><li><span className="text-green-400 font-bold">Alcista:</span> Acumulación fuerte.</li><li>Carteras institucionales comprando activamente.</li></ul>;
-                    return <ul className="mt-3 text-[10px] text-slate-400 list-disc pl-3 space-y-1"><li><span className="text-red-400 font-bold">Bajista:</span> Distribución masiva.</li><li>Salida detectada de Smart Money.</li></ul>;
-                }
-                if (type === 'rr') {
-                    return <ul className="mt-3 text-[10px] text-slate-400 list-disc pl-3 space-y-1"><li><span className="text-green-400 font-bold">Óptimo:</span> Asimetría positiva.</li><li>La ganancia potencial triplica el riesgo de pérdida.</li></ul>;
-                }
             };
 
             const handleAuth = async (e) => {
                 e.preventDefault();
                 setAuthError('');
+                
+                // Validación estricta de contraseñas en registro
+                if (!isLoginMode && password !== confirmPassword) {
+                    setAuthError("Las contraseñas no coinciden. Por favor, verifica.");
+                    return;
+                }
+
                 try {
                     if (isLoginMode) {
                         await auth.signInWithEmailAndPassword(email, password);
@@ -349,49 +275,37 @@
 
             const handleLogout = () => { auth.signOut(); setShowProfileModal(false); setSelectedAssetKey('btc'); };
 
-            const handleStripePayment = () => {
-                if (STRIPE_PAYMENT_LINK) {
-                    const w = 500; const h = 750;
-                    const left = (window.screen.width / 2) - (w / 2); const top = (window.screen.height / 2) - (h / 2);
-                    window.open(STRIPE_PAYMENT_LINK, 'StripeCheckout', `width=${w},height=${h},top=${top},left=${left},toolbar=no,location=no,status=no,menubar=no,scrollbars=yes,resizable=yes`);
-                }
+            const executePayment = () => {
+                const w = 500; const h = 750;
+                const left = (window.screen.width / 2) - (w / 2); const top = (window.screen.height / 2) - (h / 2);
+                window.open(PAYMENT_LINK, 'Checkout', `width=${w},height=${h},top=${top},left=${left},toolbar=no,location=no,status=no,menubar=no,scrollbars=yes,resizable=yes`);
             };
-
-            const handleCustomerPortal = () => { if(STRIPE_CUSTOMER_PORTAL) window.open(STRIPE_CUSTOMER_PORTAL, '_blank'); };
 
             return (
                 <div className="flex flex-col min-h-screen">
-                    
-                    {/* TICKER TAPE */}
                     <div className="ticker-wrap h-10">
                         <div className="ticker-label font-mono uppercase">MERCADO VIVO ●</div>
                         <div className="ticker-content">
                             {tickerData.length > 0 ? tickerData.map(coin => {
                                 const sym = coin.symbol.replace('USDT', '');
-                                let p = parseFloat(coin.lastPrice);
-                                p = p < 0.01 ? p.toFixed(4) : (p < 1 ? p.toFixed(3) : p.toFixed(2));
+                                let p = parseFloat(coin.lastPrice); p = p < 0.01 ? p.toFixed(4) : (p < 1 ? p.toFixed(3) : p.toFixed(2));
                                 const change = parseFloat(coin.priceChangePercent); const isUp = change >= 0;
-                                return (
-                                    <div key={coin.symbol} className="ticker-item">
-                                        <span className="text-white font-bold">{sym}</span> <span className="text-slate-300 ml-1">${p}</span> <span className={`${isUp ? 'text-green-500' : 'text-red-500'} ml-2 font-bold`}>{isUp ? '▲' : '▼'} {Math.abs(change).toFixed(2)}%</span><span className="text-slate-700 mx-4">|</span>
-                                    </div>
-                                );
+                                return <div key={coin.symbol} className="ticker-item"><span className="text-white font-bold">{sym}</span> <span className="text-slate-300 ml-1">${p}</span> <span className={`${isUp ? 'text-green-500' : 'text-red-500'} ml-2 font-bold`}>{isUp ? '▲' : '▼'} {Math.abs(change).toFixed(2)}%</span><span className="text-slate-700 mx-4">|</span></div>;
                             }) : <span className="text-slate-500 font-mono text-sm px-10">Conectando a satélites institucionales...</span>}
                         </div>
                     </div>
 
-                    {/* ENCABEZADO */}
                     <header className="bg-[#0B1120]/90 backdrop-blur-md border-b border-slate-800 p-4 lg:p-6 flex flex-col lg:flex-row justify-between items-center z-40 sticky top-0">
                         <div className="flex flex-col lg:items-start mb-4 lg:mb-0 w-full lg:w-2/3">
                             <div className="flex items-center space-x-4 mb-2">
                                 <span className="text-amber-500 text-4xl lg:text-5xl animate-pulse drop-shadow-[0_0_15px_rgba(245,158,11,0.4)]">⬢</span>
                                 <div>
                                     <h1 className="text-2xl lg:text-3xl font-black font-mono tracking-tighter text-white uppercase leading-none">Q.A100X Terminal</h1>
-                                    <h2 className="text-sm lg:text-base font-bold font-mono text-slate-400 uppercase mt-1">Top 100 Cripto Monedas</h2>
+                                    <h2 className="text-sm lg:text-base font-bold font-mono text-slate-400 uppercase mt-1">Análisis Cuantitativo Impulsado por Inteligencia Artificial</h2>
                                 </div>
                             </div>
                             <p className="text-sm lg:text-base text-slate-300 font-medium tracking-wide max-w-3xl mt-3 mb-4 text-center lg:text-left">
-                                Procesamos millones de datos on-chain, flujos de liquidez macroeconómico y análisis fundamental para rankear las mejores oportunidades tanto en largo como en corto del mercado.
+                                Procesamos millones de datos on-chain y flujos de liquidez utilizando algoritmos avanzados para rankear las mejores oportunidades a largo y corto plazo.
                             </p>
                             <div className="flex flex-col xl:flex-row items-center xl:items-start gap-4 w-full">
                                 <div className="flex flex-wrap justify-center lg:justify-start gap-3">
@@ -399,12 +313,10 @@
                                         <span className="text-cyan-500 text-xs mr-2 animate-pulse">●</span><span className="text-[10px] font-black text-slate-400 font-mono mr-1">ACTUALIZADO:</span><span className="text-[10px] font-black text-white font-mono uppercase">{datesStr.daily}</span>
                                     </div>
                                     <div className="bg-[#020617] border border-amber-500/30 px-3 py-1.5 rounded flex items-center shadow-inner">
-                                        <span className="text-amber-500 text-xs mr-2">⏱</span><span className="text-[10px] font-black text-slate-400 font-mono mr-1">REBALANCEO DEL PORTAFOLIO SEMANAL:</span><span className="text-[10px] font-black text-amber-400 font-mono uppercase">{datesStr.weekly}</span>
+                                        <span className="text-amber-500 text-xs mr-2">⏱</span><span className="text-[10px] font-black text-slate-400 font-mono mr-1">REBALANCEO:</span><span className="text-[10px] font-black text-amber-400 font-mono uppercase">{datesStr.weekly}</span>
                                     </div>
                                 </div>
                                 <div className="flex flex-wrap justify-center lg:justify-start gap-3 xl:border-l xl:border-slate-800 xl:pl-4">
-                                    <div className="flex flex-col items-center xl:items-start"><span className="text-[9px] text-slate-500 font-black font-mono tracking-widest">CAP. MERCADO GLOBAL</span><span className="text-sm text-white font-black font-mono tracking-tight">$2.48 Trillones</span></div>
-                                    <div className="hidden md:block w-px h-8 bg-slate-800 mx-1"></div>
                                     <div className="flex flex-col items-center xl:items-start"><span className="text-[9px] text-slate-500 font-black font-mono tracking-widest">FEAR & GREED INDEX</span><span className="text-sm text-green-400 font-black font-mono tracking-tight">72 (Codicia)</span></div>
                                     <div className="hidden md:block w-px h-8 bg-slate-800 mx-1"></div>
                                     <div className="flex flex-col items-center xl:items-start"><span className="text-[9px] text-slate-500 font-black font-mono tracking-widest">DOMINANCIA BTC</span><span className="text-sm text-amber-500 font-black font-mono tracking-tight">54.8%</span></div>
@@ -412,7 +324,6 @@
                             </div>
                         </div>
 
-                        {/* CONTROLES USUARIO */}
                         <div className="flex flex-col items-center lg:items-end mt-4 lg:mt-0">
                             {user ? (
                                 <div className="flex flex-col items-end relative">
@@ -434,14 +345,9 @@
                                     <button onClick={() => { setIsLoginMode(true); setShowAuthModal(true); }} className="text-xs text-slate-400 hover:text-white underline mt-2">Ya tengo cuenta (Entrar)</button>
                                 </div>
                             )}
-                            <div className="flex items-center mt-5 space-x-2">
-                                <span className="relative flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span></span>
-                                <p className="text-[10px] text-slate-400 font-bold font-mono">1,204 INVERSORES EN LÍNEA</p>
-                            </div>
                         </div>
                     </header>
 
-                    {/* CUERPO PRINCIPAL */}
                     <div className="flex-1 flex flex-col xl:flex-row w-full relative">
                         <aside className="w-full xl:w-[350px] bg-[#0B1120] border-r border-slate-800 flex flex-col shrink-0">
                             <div className="flex border-b border-slate-800">
@@ -450,58 +356,34 @@
                             </div>
                             <div className="overflow-y-auto p-4 space-y-2 h-[40vh] xl:h-[calc(100vh-200px)]">
                                 {Object.values(safeCryptoData).filter(item => item.list === activeTab).map(asset => {
-                                    
                                     const isLocked = currentTier < asset.tierReq;
                                     const dotColor = activeTab === 'alpha' ? 'bg-green-500' : 'bg-red-500';
                                     const isSelected = selectedAssetKey === asset.id;
 
                                     if (isLocked) {
                                         if (currentTier === 1) {
-                                            // Nivel 1: Totalmente oculto (Solo ve 1 y 1)
                                             return (
                                                 <button key={asset.id} onClick={() => { setIsLoginMode(false); setShowAuthModal(true); }} className="w-full text-left p-4 rounded-xl border border-slate-800 hover:border-amber-500/50 bg-[#0B1120] transition-all relative overflow-hidden group">
-                                                    <div className="absolute inset-0 bg-gradient-to-r from-transparent to-transparent"></div>
                                                     <div className="flex items-center space-x-3 relative z-10">
                                                         <div className="w-3 h-3 rounded-full bg-slate-600 group-hover:bg-amber-500 transition-colors"></div>
-                                                        <div>
-                                                            <p className="font-black text-slate-500 group-hover:text-amber-500 font-mono text-base transition-colors">🔒 REGÍSTRATE GRATIS</p>
-                                                            <p className="text-xs font-bold text-slate-600 group-hover:text-slate-400 transition-colors">PARA REVELAR ACTIVO</p>
-                                                        </div>
+                                                        <div><p className="font-black text-slate-500 group-hover:text-amber-500 font-mono text-base transition-colors">🔒 REGÍSTRATE GRATIS</p><p className="text-xs font-bold text-slate-600 group-hover:text-slate-400 transition-colors">PARA REVELAR ACTIVO</p></div>
                                                     </div>
                                                 </button>
                                             );
                                         } else {
-                                            // Nivel 2: Ocultar nombres de monedas VIP (Para mantener misterio)
                                             return (
                                                 <button key={asset.id} onClick={() => setShowVipModal(true)} className="w-full text-left p-4 rounded-xl border border-slate-800 hover:border-amber-500/50 bg-[#0B1120] transition-all relative overflow-hidden group">
                                                     <div className="flex items-center justify-between relative z-10 opacity-70 group-hover:opacity-100 transition-opacity">
-                                                        <div className="flex items-center space-x-3">
-                                                            <div className={`w-3 h-3 rounded-full ${dotColor}`}></div>
-                                                            <div>
-                                                                <p className="font-black text-slate-100 font-mono text-base">???</p>
-                                                                <p className="text-xs font-bold text-slate-500">Gema Institucional</p>
-                                                            </div>
-                                                        </div>
+                                                        <div className="flex items-center space-x-3"><div className={`w-3 h-3 rounded-full ${dotColor}`}></div><div><p className="font-black text-slate-100 font-mono text-base">???</p><p className="text-xs font-bold text-slate-500">Gema Institucional</p></div></div>
                                                         <span className="text-[10px] font-black bg-amber-500/10 text-amber-500 border border-amber-500/30 px-2 py-1 rounded">🔒 VIP</span>
                                                     </div>
                                                 </button>
                                             );
                                         }
                                     }
-
-                                    // Activo libre/desbloqueado
                                     return (
                                         <button key={asset.id} onClick={() => setSelectedAssetKey(asset.id)} className={`w-full text-left p-4 rounded-xl border transition-all flex justify-between items-center group ${isSelected ? 'border-amber-500 bg-[#020617] shadow-[0_0_15px_rgba(245,158,11,0.1)]' : 'border-slate-800 hover:border-slate-600 bg-[#0B1120]'}`}>
-                                            <div className="flex items-center space-x-3">
-                                                <div className={`w-3 h-3 rounded-full ${dotColor}`}></div>
-                                                <div>
-                                                    <p className="font-black text-slate-100 font-mono text-base flex items-center">
-                                                        {asset.symbol} 
-                                                        {currentTier === 2 && !asset.fullFree && <span className="ml-2 text-xs text-amber-500" title="Proyecciones Bloqueadas">🔒</span>}
-                                                    </p>
-                                                    <p className="text-xs font-bold text-slate-500 group-hover:text-slate-400">{asset.name}</p>
-                                                </div>
-                                            </div>
+                                            <div className="flex items-center space-x-3"><div className={`w-3 h-3 rounded-full ${dotColor}`}></div><div><p className="font-black text-slate-100 font-mono text-base flex items-center">{asset.symbol} {currentTier === 2 && !asset.fullFree && <span className="ml-2 text-xs text-amber-500">🔒</span>}</p><p className="text-xs font-bold text-slate-500 group-hover:text-slate-400">{asset.name}</p></div></div>
                                             <span className={`text-xs font-black transition-colors hidden md:block ${isSelected ? 'text-amber-500' : 'text-slate-600 group-hover:text-slate-300'}`}>VER</span>
                                         </button>
                                     );
@@ -516,7 +398,6 @@
                                         <div className="flex items-center space-x-4 mb-3">
                                             <h2 className="text-4xl lg:text-5xl font-black text-white tracking-tight">{selectedAsset?.name || 'Cargando...'}</h2>
                                             <span className="bg-slate-800 text-white px-4 py-1.5 rounded text-lg font-bold border border-slate-600">{selectedAsset?.symbol || '---'}</span>
-                                            {selectedAsset?.fullFree && <span className="bg-emerald-500/20 text-emerald-400 text-xs font-bold px-2 py-1 rounded border border-emerald-500/50">MUESTRA GRATIS</span>}
                                         </div>
                                         <p className="text-amber-500 text-lg font-bold tracking-widest uppercase">{selectedAsset?.narrative || 'Análisis...'}</p>
                                     </div>
@@ -566,7 +447,6 @@
                                                         <p className="text-[10px] text-slate-500 font-bold mb-1 uppercase">{m === 'rr' ? 'Riesgo/Recompensa' : m + ' Ratio'}</p>
                                                         <p className="text-xl font-black text-white font-mono">{m === 'whales' ? (selectedAsset?.advMetrics?.whales || 'N/A') : (selectedAsset?.advMetrics?.[m] || 'N/A')}</p>
                                                     </div>
-                                                    {renderMetricExplanation(m, selectedAsset?.advMetrics?.[m])}
                                                 </div>
                                             ))}
                                         </div>
@@ -579,7 +459,6 @@
                                         <div className="absolute inset-0 z-20 backdrop-blur-md bg-[#020617]/70 flex flex-col items-center justify-center border-2 border-amber-500/50 rounded-xl p-6 text-center">
                                             <span className="text-6xl mb-4 drop-shadow-[0_0_15px_rgba(245,158,11,0.5)]">💎</span>
                                             <h3 className="text-3xl font-black text-white mb-3 uppercase tracking-tighter">Inteligencia Gráfica Institucional</h3>
-                                            <p className="text-slate-300 text-base max-w-lg mb-8 leading-relaxed">Nuestros algoritmos ya calcularon los precios objetivo a corto y largo plazo, además del análisis de "Fuerza Relativa" comparando este activo contra BTC y el S&P 500.</p>
                                             <button onClick={() => setShowVipModal(true)} className="bg-gradient-to-r from-amber-500 to-orange-500 text-black px-8 py-4 rounded-xl font-black uppercase tracking-widest text-lg shadow-[0_0_30px_rgba(245,158,11,0.4)]">Desbloquear Proyecciones VIP</button>
                                         </div>
                                     )}
@@ -597,22 +476,13 @@
                                                     <div key={t} className="bg-[#020617] p-6 rounded-xl border border-slate-800">
                                                         <h3 className="text-xs font-black text-slate-500 mb-2 uppercase">OBJETIVO {t} plazo</h3>
                                                         <p className="text-2xl font-black font-mono mb-3 text-amber-400">{formatPrice(currentPrice && selectedAsset?.projMuls ? currentPrice * selectedAsset.projMuls[idx] : null)}</p>
-                                                        <p className="text-sm font-medium text-slate-300">{selectedAsset?.projections?.[t] || 'Calculando...'}</p>
                                                     </div>
                                                 ))}
                                             </div>
                                         </div>
-
                                         <div className="bg-[#0B1120] border border-slate-800 rounded-xl p-6 lg:p-8">
-                                            <div className="mb-6"><h2 className="text-sm font-black uppercase text-slate-400 tracking-widest mb-2">📈 Rendimiento Institucional (30 Días)</h2><p className="text-sm text-slate-500">Comparativa de fuerza relativa contra el mercado cripto general y la bolsa de valores tradicional.</p></div>
+                                            <div className="mb-6"><h2 className="text-sm font-black uppercase text-slate-400 tracking-widest mb-2">📈 Rendimiento Institucional (30 Días)</h2></div>
                                             <div className="chart-container bg-[#020617] border border-slate-800/50 rounded-xl overflow-hidden p-2"><canvas ref={compChartRef}></canvas></div>
-                                            <div className="mt-6 bg-[#020617] border border-slate-800 p-5 rounded-xl">
-                                                <h4 className="text-xs font-black text-amber-500 mb-3 uppercase tracking-widest">💡 Análisis algorítmico de la gráfica</h4>
-                                                <ul className="text-sm text-slate-300 space-y-3 list-disc pl-4 marker:text-amber-500">
-                                                    <li><span className="text-white font-bold">Correlación Base:</span> La línea de <b>{selectedAsset?.symbol || 'Activo'}</b> ilustra su momento de fuerza relativa tomando como ancla el rendimiento de Bitcoin.</li>
-                                                    <li><span className="text-white font-bold">Comportamiento:</span> Al ser catalogado en la zona {(selectedAsset?.list || '') === 'alpha' ? <span className="text-green-400 font-bold">Alpha (Long)</span> : <span className="text-red-400 font-bold">Omega (Short)</span>} con Beta de {selectedAsset?.advMetrics?.beta || '1'}, la gráfica confirma {(selectedAsset?.list || '') === 'alpha' ? "una divergencia positiva que demuestra entrada constante de flujo institucional sobre el promedio." : "debilidad estructural con salidas de liquidez frente al mercado global."}</li>
-                                                </ul>
-                                            </div>
                                         </div>
                                     </div>
                                 </section>
@@ -626,28 +496,25 @@
                             <div className="bg-[#0B1120] border border-slate-700 w-full max-w-sm rounded-3xl p-8 relative">
                                 <button onClick={() => setShowProfileModal(false)} className="absolute top-5 right-5 text-slate-500 text-xl">✕</button>
                                 <div className="text-center mb-6">
-                                    <div className="w-20 h-20 bg-slate-800 rounded-full mx-auto mb-4 flex items-center justify-center text-3xl border border-slate-700">👤</div>
                                     <h2 className="text-xl font-black text-white">{user.displayName || "Usuario QA100X"}</h2><p className="text-slate-400 text-sm font-mono mt-1">{user.email}</p>
                                 </div>
-                                <div className="bg-[#020617] p-4 rounded-xl border border-slate-800 mb-6">
-                                    <p className="text-xs text-slate-500 font-bold mb-1">NIVEL DE CUENTA</p><p className={`font-black ${currentTier === 3 ? 'text-amber-500' : 'text-emerald-400'}`}>{currentTier === 3 ? '💎 VIP Premium' : '🔓 Freemium Básico'}</p>
-                                </div>
                                 <div className="space-y-3">
-                                    <button onClick={handleCustomerPortal} className="w-full bg-slate-800 text-white font-bold py-3 rounded-xl border border-slate-600 flex items-center justify-center hover:bg-slate-700 transition-colors">💳 Cancelar o Modificar Suscripción</button>
+                                    <button onClick={() => window.open(CUSTOMER_PORTAL, '_blank')} className="w-full bg-slate-800 text-white font-bold py-3 rounded-xl border border-slate-600 flex items-center justify-center hover:bg-slate-700 transition-colors">💳 Cancelar o Modificar Suscripción</button>
                                     <button onClick={handleLogout} className="w-full bg-red-500/10 text-red-500 font-bold py-3 rounded-xl border border-red-500/30 hover:bg-red-500/20 transition-colors">Cerrar Sesión</button>
                                 </div>
                             </div>
                         </div>
                     )}
 
-                    {/* MODAL AUTH */}
+                    {/* MODAL AUTH MEJORADO */}
                     {showAuthModal && (
                         <div className="fixed inset-0 z-50 modal-backdrop flex items-center justify-center p-4">
                             <div className="bg-[#0B1120] border border-amber-500/30 w-full max-w-md rounded-3xl p-8 relative max-h-[95vh] overflow-y-auto shadow-[0_0_40px_rgba(245,158,11,0.15)]">
                                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-amber-500 to-transparent"></div>
                                 <button onClick={() => setShowAuthModal(false)} className="absolute top-5 right-5 text-slate-500 text-xl hover:text-white">✕</button>
                                 <div className="text-center mb-6 mt-2">
-                                    <span className="text-amber-500 text-5xl block mb-3 drop-shadow-[0_0_15px_rgba(245,158,11,0.5)]">⬢</span><h2 className="text-2xl font-black text-white uppercase tracking-tighter">{isLoginMode ? 'Conexión Segura' : 'Desbloquea el Nivel 2'}</h2>
+                                    <span className="text-amber-500 text-5xl block mb-3 drop-shadow-[0_0_15px_rgba(245,158,11,0.5)]">⬢</span>
+                                    <h2 className="text-2xl font-black text-white uppercase tracking-tighter">{isLoginMode ? 'Conexión Segura' : 'Desbloquea el Nivel 2'}</h2>
                                 </div>
                                 {authError && <div className="bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-bold p-3 rounded mb-4 text-center">{authError}</div>}
                                 <form onSubmit={handleAuth} className="space-y-4">
@@ -659,6 +526,9 @@
                                     )}
                                     <div><label className="block text-xs font-bold text-slate-500 mb-1 uppercase">Correo</label><input type="email" value={email} onChange={e => setEmail(e.target.value)} required className="w-full bg-[#020617] border border-slate-700 text-white rounded-xl px-4 py-3 focus:border-amber-500 focus:outline-none" placeholder="tu@correo.com" /></div>
                                     <div><label className="block text-xs font-bold text-slate-500 mb-1 uppercase">Contraseña</label><input type="password" value={password} onChange={e => setPassword(e.target.value)} required className="w-full bg-[#020617] border border-slate-700 text-white rounded-xl px-4 py-3 focus:border-amber-500 focus:outline-none" placeholder="••••••••" /></div>
+                                    {!isLoginMode && (
+                                        <div><label className="block text-xs font-bold text-slate-500 mb-1 uppercase">Confirmar Contraseña</label><input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required className="w-full bg-[#020617] border border-slate-700 text-white rounded-xl px-4 py-3 focus:border-amber-500 focus:outline-none" placeholder="••••••••" /></div>
+                                    )}
                                     <button type="submit" className="w-full bg-amber-500 text-black font-black text-lg py-4 rounded-xl uppercase tracking-widest mt-4 hover:bg-amber-400 shadow-[0_0_20px_rgba(245,158,11,0.2)] transition-colors">{isLoginMode ? 'INGRESAR' : 'REGISTRARSE GRATIS'}</button>
                                 </form>
                                 <div className="mt-6 text-center"><button onClick={() => { setIsLoginMode(!isLoginMode); setAuthError(''); }} className="text-sm text-slate-500 hover:text-white underline">{isLoginMode ? '¿No tienes cuenta? Regístrate aquí' : '¿Ya tienes cuenta? Inicia sesión'}</button></div>
@@ -666,38 +536,28 @@
                         </div>
                     )}
 
-                    {/* MODAL VIP ULTRAPERFECCIONADO PARA VENTAS */}
+                    {/* MODAL VIP DE ALTA CONVERSIÓN */}
                     {showVipModal && (
                         <div className="fixed inset-0 z-50 modal-backdrop flex items-center justify-center p-4">
                             <div className="bg-[#0B1120] border-2 border-amber-500/50 w-full max-w-lg rounded-3xl p-8 text-center shadow-[0_0_50px_rgba(245,158,11,0.2)]">
                                 <button onClick={() => setShowVipModal(false)} className="absolute top-5 right-5 text-slate-500 text-xl hover:text-white">✕</button>
-                                
                                 <span className="text-6xl block mb-4">💎</span>
                                 <div className="bg-amber-500/10 text-amber-500 text-xs font-black px-3 py-1 rounded-full inline-block border border-amber-500/30 mb-4 tracking-widest">NIVEL 3 REQUERIDO</div>
                                 <h2 className="text-3xl font-black text-white uppercase tracking-tighter mb-4">Acceso VIP Restringido</h2>
                                 
-                                <p className="text-slate-300 text-base mb-6 leading-relaxed">
-                                    Estás a un paso de ver las gráficas algorítmicas, la comparativa contra S&P500 y los precios objetivo. Únete al club VIP y opera con la inteligencia de Wall Street.
-                                </p>
-
-                                {/* Lista de Beneficios para Alta Conversión */}
-                                <div className="text-left bg-[#020617] border border-amber-500/20 rounded-xl p-5 mb-8 space-y-3">
-                                    <h4 className="text-amber-500 font-black text-sm uppercase tracking-widest mb-2 border-b border-amber-500/20 pb-2">Tu Membresía Incluye:</h4>
-                                    <p className="text-sm text-slate-300 flex items-start"><span className="mr-2">✅</span> <span>Análisis algorítmico de 20 activos de alto impacto.</span></p>
-                                    <p className="text-sm text-slate-300 flex items-start"><span className="mr-2">✅</span> <span>Precios objetivo exactos (Corto, Medio y Largo plazo).</span></p>
-                                    <p className="text-sm text-slate-300 flex items-start"><span className="mr-2">✅</span> <span>Gráficas de Fuerza Relativa Institucional (vs BTC y S&P500).</span></p>
-                                    <p className="text-sm text-slate-300 flex items-start"><span className="mr-2">✅</span> <span>Métricas cuantitativas desbloqueadas (Sharpe, Beta).</span></p>
-                                    <p className="text-sm text-slate-300 flex items-start"><span className="mr-2">✅</span> <span>Rebalanceo estratégico de portafolio cada semana.</span></p>
+                                <div className="flex items-center justify-center space-x-4 mb-4">
+                                    <span className="text-slate-500 line-through text-2xl">$99 USD</span>
+                                    <span className="text-4xl font-black text-amber-500">$19 USD<span className="text-sm text-amber-500/70">/mes</span></span>
+                                    <span className="bg-red-500 text-white text-xs font-black px-2 py-1 rounded animate-pulse">-80% HOY</span>
                                 </div>
+
+                                <p className="text-slate-300 text-sm mb-6 leading-relaxed">
+                                    Estás a un paso de maximizar tus ganancias aprovechando el máximo potencial de la inteligencia artificial. Desbloquea las gráficas algorítmicas, proyecciones exactas y opera con la misma ventaja injusta de Wall Street.
+                                </p>
                                 
-                                <button onClick={handleStripePayment} className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-black font-black text-xl py-4 rounded-xl uppercase tracking-wider hover:scale-105 transition-transform shadow-[0_0_25px_rgba(245,158,11,0.4)]">
+                                <button onClick={executePayment} className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-black font-black text-xl py-4 rounded-xl uppercase tracking-wider hover:scale-105 transition-transform shadow-[0_0_25px_rgba(245,158,11,0.4)]">
                                     OBTENER ACCESO VIP AHORA
                                 </button>
-                                
-                                <div className="flex items-center justify-center mt-6 space-x-2 bg-[#020617] py-3 px-4 rounded-xl border border-slate-800">
-                                    <span className="text-2xl">🔒</span>
-                                    <p className="text-sm font-bold font-mono text-slate-400">Procesado de forma segura por Stripe</p>
-                                </div>
                             </div>
                         </div>
                     )}
