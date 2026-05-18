@@ -3,11 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QA100X | Panel de Administrador</title>
+    <title>QA100X | Bóveda del Administrador</title>
     <script src="https://cdn.tailwindcss.com"></script>
     
     <!-- FIREBASE SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
 
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
@@ -15,35 +16,75 @@
         body { background-color: #020617; color: #e2e8f0; font-family: 'Inter', sans-serif; }
         .font-mono { font-family: 'JetBrains Mono', monospace; }
         textarea { background-color: #0f172a; color: #38bdf8; font-family: 'JetBrains Mono', monospace; }
+        .qa-hidden { display: none !important; }
     </style>
 </head>
-<body class="p-8">
+<body class="p-4 md:p-8 min-h-screen flex flex-col items-center justify-center">
 
-    <div class="max-w-4xl mx-auto">
-        <div class="flex items-center space-x-4 mb-8 border-b border-slate-800 pb-6">
-            <span class="text-amber-500 text-4xl">⚙️</span>
-            <div>
-                <h1 class="text-3xl font-black text-white uppercase tracking-tight">Terminal del CEO</h1>
-                <p class="text-slate-400 font-mono text-sm">Centro de Control de Rebalanceo en la Nube (Firebase)</p>
+    <!-- ==========================================
+         PANTALLA DE LOGIN SEGURO (BÓVEDA)
+         ========================================== -->
+    <div id="login-section" class="w-full max-w-md bg-[#0B1120] border border-red-500/30 rounded-2xl p-8 shadow-[0_0_30px_rgba(239,68,68,0.15)] text-center relative overflow-hidden">
+        <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-red-500 to-transparent"></div>
+        <span class="text-red-500 text-5xl block mb-4">🛡️</span>
+        <h2 class="text-2xl font-black text-white uppercase tracking-tighter mb-2">Bóveda de Seguridad</h2>
+        <p class="text-slate-400 text-sm mb-6">Acceso restringido. Solo el correo autorizado como administrador puede entrar a este panel.</p>
+        
+        <div id="login-error" class="hidden bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-bold p-3 rounded mb-4"></div>
+
+        <input type="email" id="admin-email" placeholder="Correo de Administrador" class="w-full bg-[#020617] border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-red-500 mb-4 transition-colors text-sm">
+        <input type="password" id="admin-password" placeholder="Contraseña" class="w-full bg-[#020617] border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-red-500 mb-6 transition-colors text-sm">
+        
+        <button onclick="loginAdmin()" class="w-full bg-red-500 hover:bg-red-600 text-white font-black py-3 rounded-lg uppercase tracking-wider transition-colors shadow-[0_0_15px_rgba(239,68,68,0.3)]">
+            Verificar Identidad
+        </button>
+    </div>
+
+    <!-- ==========================================
+         PANEL DE ADMINISTRACIÓN (Oculto por defecto)
+         ========================================== -->
+    <div id="admin-section" class="w-full max-w-4xl mx-auto qa-hidden">
+        <div class="flex items-center justify-between mb-8 border-b border-slate-800 pb-6">
+            <div class="flex items-center space-x-4">
+                <span class="text-amber-500 text-4xl">⚙️</span>
+                <div>
+                    <h1 class="text-2xl md:text-3xl font-black text-white uppercase tracking-tight">Terminal del CEO</h1>
+                    <p class="text-slate-400 font-mono text-xs md:text-sm">Centro de Control de Rebalanceo Seguro (Firestore)</p>
+                </div>
             </div>
+            <button onclick="logoutAdmin()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2 rounded text-xs font-bold border border-slate-700 transition-colors">
+                Cerrar Bóveda
+            </button>
         </div>
 
-        <div class="bg-[#0B1120] border border-slate-800 rounded-xl p-6 shadow-2xl">
+        <div class="bg-[#0B1120] border border-slate-800 rounded-xl p-6 shadow-2xl relative">
+            <div class="absolute -top-3 -right-3 bg-green-500/20 border border-green-500/50 text-green-400 px-3 py-1 rounded-full text-xs font-black shadow-[0_0_10px_rgba(34,197,94,0.3)]">
+                CONEXIÓN ENCRIPTADA
+            </div>
+
             <h2 class="text-xl font-bold text-white mb-2">1. Pega el JSON del Deep Research aquí:</h2>
-            <p class="text-slate-400 text-sm mb-4">Pega exactamente el bloque de código que te arrojó la IA. Asegúrate de que empiece con <code class="bg-slate-800 px-1 rounded">{</code> y termine con <code class="bg-slate-800 px-1 rounded">}</code>.</p>
+            <p class="text-slate-400 text-sm mb-4">Pega exactamente el bloque de código que te arrojó la IA. Asegúrate de que empiece con <code class="bg-slate-800 text-amber-500 px-1 rounded">{</code> y termine con <code class="bg-slate-800 text-amber-500 px-1 rounded">}</code>.</p>
             
             <textarea id="json-input" class="w-full h-96 border border-slate-700 rounded-lg p-4 focus:outline-none focus:border-amber-500 mb-6" spellcheck="false" placeholder="{\n  'btc': {\n    'id': 'btc',\n    ...\n  }\n}"></textarea>
             
-            <div id="status-message" class="hidden p-4 rounded-lg mb-6 font-bold text-center"></div>
+            <div id="status-message" class="hidden p-4 rounded-lg mb-6 font-bold text-center text-sm md:text-base"></div>
 
-            <button onclick="uploadToFirebase()" class="w-full bg-amber-500 hover:bg-amber-400 text-black font-black text-xl py-4 rounded-lg uppercase tracking-wider transition-colors shadow-[0_0_20px_rgba(245,158,11,0.2)]">
-                🚀 Actualizar Terminal en Vivo (Subir a Firebase)
+            <button id="upload-btn" onclick="uploadToFirebase()" class="w-full bg-amber-500 hover:bg-amber-400 text-black font-black text-lg md:text-xl py-4 rounded-lg uppercase tracking-wider transition-colors shadow-[0_0_20px_rgba(245,158,11,0.2)]">
+                🚀 Confirmar Rebalanceo y Subir a Producción
             </button>
         </div>
     </div>
 
     <script>
-        // Inicializar Firebase con las credenciales de QA100X
+        // ==========================================
+        // 1. CONFIGURACIÓN DE SEGURIDAD (¡EDITA AQUÍ!)
+        // ==========================================
+        // CEO: Escribe aquí el único correo que tendrá permiso para ver el panel
+        const CORREO_DEL_ADMINISTRADOR = "a100x.app@gmail.com";
+
+        // ==========================================
+        // 2. INICIALIZAR FIREBASE
+        // ==========================================
         const firebaseConfig = {
             apiKey: "AIzaSyATUuq8jhfiFPwzlhvV6G1hk9u6fCtqS8w",
             authDomain: "qa100x.firebaseapp.com",
@@ -57,43 +98,114 @@
         if (!firebase.apps.length) {
             firebase.initializeApp(firebaseConfig);
         }
+        const auth = firebase.auth();
         const db = firebase.firestore();
 
+        const loginSection = document.getElementById('login-section');
+        const adminSection = document.getElementById('admin-section');
+        const errorEl = document.getElementById('login-error');
+
+        // ==========================================
+        // 3. MONITOR DE SESIÓN AUTOMÁTICO
+        // ==========================================
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                // Verificar si es el administrador autorizado
+                if (user.email.toLowerCase() === CORREO_DEL_ADMINISTRADOR.toLowerCase()) {
+                    loginSection.classList.add('qa-hidden');
+                    adminSection.classList.remove('qa-hidden');
+                } else {
+                    // Es un usuario normal que intentó entrar al admin
+                    errorEl.innerText = "ACCESO DENEGADO: Tu cuenta no tiene privilegios de administrador.";
+                    errorEl.classList.remove('hidden');
+                    auth.signOut(); // Lo expulsamos
+                }
+            } else {
+                loginSection.classList.remove('qa-hidden');
+                adminSection.classList.add('qa-hidden');
+            }
+        });
+
+        // ==========================================
+        // 4. FUNCIONES DE AUTENTICACIÓN
+        // ==========================================
+        async function loginAdmin() {
+            const email = document.getElementById('admin-email').value;
+            const password = document.getElementById('admin-password').value;
+            errorEl.classList.add('hidden');
+
+            if(email.toLowerCase() !== CORREO_DEL_ADMINISTRADOR.toLowerCase()) {
+                errorEl.innerText = "ACCESO DENEGADO: Correo no autorizado.";
+                errorEl.classList.remove('hidden');
+                return;
+            }
+
+            try {
+                await auth.signInWithEmailAndPassword(email, password);
+                // El monitor de sesión (onAuthStateChanged) hará el resto
+            } catch (error) {
+                errorEl.innerText = "Error: " + error.message;
+                errorEl.classList.remove('hidden');
+            }
+        }
+
+        function logoutAdmin() {
+            auth.signOut();
+        }
+
+        // Permitir Login con Enter
+        document.getElementById('admin-password').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') loginAdmin();
+        });
+
+        // ==========================================
+        // 5. FUNCIÓN DE SUBIDA (REBALANCEO)
+        // ==========================================
         async function uploadToFirebase() {
             const inputEl = document.getElementById('json-input');
             const statusEl = document.getElementById('status-message');
-            const btn = document.querySelector('button');
+            const btn = document.getElementById('upload-btn');
             
-            statusEl.classList.remove('hidden', 'bg-green-500/20', 'text-green-400', 'bg-red-500/20', 'text-red-400');
-            btn.innerText = "PROCESANDO...";
+            statusEl.classList.add('hidden');
+            statusEl.classList.remove('bg-green-500/20', 'text-green-400', 'bg-red-500/20', 'text-red-400', 'border', 'border-green-500/50', 'border-red-500/50');
+            
+            btn.innerText = "PROCESANDO ENCRIPTACIÓN...";
             btn.classList.add('opacity-50', 'cursor-not-allowed');
 
             try {
-                // 1. Validar que el texto sea JSON real
+                // 1. Doble validación de seguridad
+                const currentUser = auth.currentUser;
+                if(!currentUser || currentUser.email.toLowerCase() !== CORREO_DEL_ADMINISTRADOR.toLowerCase()) {
+                    throw new Error("Violación de seguridad. Sesión no válida.");
+                }
+
+                // 2. Validar JSON
                 let parsedData;
                 try {
                     parsedData = JSON.parse(inputEl.value);
                 } catch (e) {
-                    throw new Error("El texto que pegaste no es un formato JSON válido. Revisa que no haya texto sobrante de la IA antes o después de las llaves { }.");
+                    throw new Error("El texto no es un JSON válido. Revisa las comillas y comas.");
                 }
 
-                // 2. Inyectar a Firebase en la colección 'portfolio', documento 'current'
+                // 3. Subir a Firestore
                 await db.collection('portfolio').doc('current').set({
                     assets: parsedData,
-                    lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                    lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
+                    updatedBy: currentUser.email
                 });
 
                 // Éxito
-                statusEl.innerText = "✅ ¡ÉXITO! La base de datos ha sido actualizada. Todos los usuarios ya están viendo los nuevos datos.";
-                statusEl.classList.add('block', 'bg-green-500/20', 'text-green-400', 'border', 'border-green-500/50');
+                statusEl.innerText = "✅ ¡ÉXITO! Base de datos actualizada en vivo para todos los usuarios.";
+                statusEl.classList.add('bg-green-500/20', 'text-green-400', 'border', 'border-green-500/50');
+                statusEl.classList.remove('hidden');
                 
             } catch (error) {
-                // Error
                 console.error(error);
                 statusEl.innerText = "❌ ERROR: " + error.message;
-                statusEl.classList.add('block', 'bg-red-500/20', 'text-red-400', 'border', 'border-red-500/50');
+                statusEl.classList.add('bg-red-500/20', 'text-red-400', 'border', 'border-red-500/50');
+                statusEl.classList.remove('hidden');
             } finally {
-                btn.innerText = "🚀 Actualizar Terminal en Vivo (Subir a Firebase)";
+                btn.innerText = "🚀 Confirmar Rebalanceo y Subir a Producción";
                 btn.classList.remove('opacity-50', 'cursor-not-allowed');
             }
         }
