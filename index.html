@@ -101,13 +101,12 @@
         function App() {
             // Estados Autenticación
             const [user, setUser] = useState(null); 
-            const [isSimulatedVip, setIsSimulatedVip] = useState(false); // Para desarrollo
             
             // Lógica de Niveles
             // 1: Invitado (Ve todo bloqueado excepto BTC y ADA)
             // 2: Freemium (Ve todo el análisis, pero Proyecciones Bloqueadas)
             // 3: VIP (Ve todo sin bloqueos)
-            const currentTier = user ? (isSimulatedVip ? 3 : 2) : 1; 
+            const currentTier = user ? (user.displayName === 'VIP' ? 3 : 2) : 1; 
             
             // Estados UI
             const [activeTab, setActiveTab] = useState('alpha');
@@ -259,7 +258,7 @@
                 }
             };
 
-            const handleLogout = () => { auth.signOut(); setShowProfileModal(false); setIsSimulatedVip(false); setSelectedAssetKey('btc'); };
+            const handleLogout = () => { auth.signOut(); setShowProfileModal(false); setSelectedAssetKey('btc'); };
 
             const handleStripePayment = () => {
                 if (STRIPE_PAYMENT_LINK) {
@@ -333,8 +332,13 @@
                                 </div>
                                 <div className="flex flex-wrap justify-center lg:justify-start gap-3 xl:border-l xl:border-slate-800 xl:pl-4">
                                     <div className="flex flex-col items-center xl:items-start">
-                                        <span className="text-[9px] text-slate-500 font-black font-mono tracking-widest">CAP. MERCADO</span>
+                                        <span className="text-[9px] text-slate-500 font-black font-mono tracking-widest">CAP. MERCADO GLOBAL</span>
                                         <span className="text-sm text-white font-black font-mono tracking-tight">$2.48 Trillones</span>
+                                    </div>
+                                    <div className="hidden md:block w-px h-8 bg-slate-800 mx-1"></div>
+                                    <div className="flex flex-col items-center xl:items-start">
+                                        <span className="text-[9px] text-slate-500 font-black font-mono tracking-widest">FEAR & GREED INDEX</span>
+                                        <span className="text-sm text-green-400 font-black font-mono tracking-tight">72 (Codicia)</span>
                                     </div>
                                     <div className="hidden md:block w-px h-8 bg-slate-800 mx-1"></div>
                                     <div className="flex flex-col items-center xl:items-start">
@@ -366,7 +370,6 @@
                                         <button onClick={() => setShowProfileModal(true)} className="flex items-center text-xs text-slate-300 hover:text-white bg-slate-800 px-3 py-1.5 rounded-md border border-slate-700 transition-colors">
                                             <span className="mr-2">👤</span> Mi Cuenta
                                         </button>
-                                        {currentTier === 2 && <button onClick={()=>setIsSimulatedVip(true)} className="text-[10px] bg-amber-500 text-black px-2 py-1 rounded font-bold">Simular VIP (Dev)</button>}
                                     </div>
                                 </div>
                             ) : (
