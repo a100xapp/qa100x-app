@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QA100X | Panel de Administrador</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- FIREBASE SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
+
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        body { background-color: #020617; color: #e2e8f0; font-family: 'Inter', sans-serif; }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        textarea { background-color: #0f172a; color: #38bdf8; font-family: 'JetBrains Mono', monospace; }
+    </style>
+</head>
+<body class="p-8">
+
+    <div class="max-w-4xl mx-auto">
+        <div class="flex items-center space-x-4 mb-8 border-b border-slate-800 pb-6">
+            <span class="text-amber-500 text-4xl">⚙️</span>
+            <div>
+                <h1 class="text-3xl font-black text-white uppercase tracking-tight">Terminal del CEO</h1>
+                <p class="text-slate-400 font-mono text-sm">Centro de Control de Rebalanceo en la Nube (Firebase)</p>
+            </div>
+        </div>
+
+        <div class="bg-[#0B1120] border border-slate-800 rounded-xl p-6 shadow-2xl">
+            <h2 class="text-xl font-bold text-white mb-2">1. Pega el JSON del Deep Research aquí:</h2>
+            <p class="text-slate-400 text-sm mb-4">Pega exactamente el bloque de código que te arrojó la IA. Asegúrate de que empiece con <code class="bg-slate-800 px-1 rounded">{</code> y termine con <code class="bg-slate-800 px-1 rounded">}</code>.</p>
+            
+            <textarea id="json-input" class="w-full h-96 border border-slate-700 rounded-lg p-4 focus:outline-none focus:border-amber-500 mb-6" spellcheck="false" placeholder="{\n  'btc': {\n    'id': 'btc',\n    ...\n  }\n}"></textarea>
+            
+            <div id="status-message" class="hidden p-4 rounded-lg mb-6 font-bold text-center"></div>
+
+            <button onclick="uploadToFirebase()" class="w-full bg-amber-500 hover:bg-amber-400 text-black font-black text-xl py-4 rounded-lg uppercase tracking-wider transition-colors shadow-[0_0_20px_rgba(245,158,11,0.2)]">
+                🚀 Actualizar Terminal en Vivo (Subir a Firebase)
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Inicializar Firebase con las credenciales de QA100X
+        const firebaseConfig = {
+            apiKey: "AIzaSyATUuq8jhfiFPwzlhvV6G1hk9u6fCtqS8w",
+            authDomain: "qa100x.firebaseapp.com",
+            projectId: "qa100x",
+            storageBucket: "qa100x.firebasestorage.app",
+            messagingSenderId: "1021886151118",
+            appId: "1:1021886151118:web:3039286e6760aa8cb9d39f",
+            measurementId: "G-KK8QRBXFHH"
+        };
+
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const db = firebase.firestore();
+
+        async function uploadToFirebase() {
+            const inputEl = document.getElementById('json-input');
+            const statusEl = document.getElementById('status-message');
+            const btn = document.querySelector('button');
+            
+            statusEl.classList.remove('hidden', 'bg-green-500/20', 'text-green-400', 'bg-red-500/20', 'text-red-400');
+            btn.innerText = "PROCESANDO...";
+            btn.classList.add('opacity-50', 'cursor-not-allowed');
+
+            try {
+                // 1. Validar que el texto sea JSON real
+                let parsedData;
+                try {
+                    parsedData = JSON.parse(inputEl.value);
+                } catch (e) {
+                    throw new Error("El texto que pegaste no es un formato JSON válido. Revisa que no haya texto sobrante de la IA antes o después de las llaves { }.");
+                }
+
+                // 2. Inyectar a Firebase en la colección 'portfolio', documento 'current'
+                await db.collection('portfolio').doc('current').set({
+                    assets: parsedData,
+                    lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                // Éxito
+                statusEl.innerText = "✅ ¡ÉXITO! La base de datos ha sido actualizada. Todos los usuarios ya están viendo los nuevos datos.";
+                statusEl.classList.add('block', 'bg-green-500/20', 'text-green-400', 'border', 'border-green-500/50');
+                
+            } catch (error) {
+                // Error
+                console.error(error);
+                statusEl.innerText = "❌ ERROR: " + error.message;
+                statusEl.classList.add('block', 'bg-red-500/20', 'text-red-400', 'border', 'border-red-500/50');
+            } finally {
+                btn.innerText = "🚀 Actualizar Terminal en Vivo (Subir a Firebase)";
+                btn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+        }
+    </script>
+</body>
+</html>
