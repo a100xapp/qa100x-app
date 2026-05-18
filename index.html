@@ -251,6 +251,29 @@
                 });
             };
 
+            const renderMetricExplanation = (type, value) => {
+                if(!value) return null;
+                if (type === 'sharpe') {
+                    const v = parseFloat(value);
+                    if (v >= 1.5) return <ul className="mt-3 text-[10px] text-slate-400 list-disc pl-3 space-y-1"><li><span className="text-green-400 font-bold">Excelente:</span> Supera el benchmark.</li><li>El retorno justifica ampliamente el riesgo asumido.</li></ul>;
+                    if (v >= 1) return <ul className="mt-3 text-[10px] text-slate-400 list-disc pl-3 space-y-1"><li><span className="text-blue-400 font-bold">Bueno:</span> Riesgo moderado.</li><li>Atractivo para institucionales.</li></ul>;
+                    return <ul className="mt-3 text-[10px] text-slate-400 list-disc pl-3 space-y-1"><li><span className="text-red-400 font-bold">Peligroso:</span> Alta volatilidad.</li><li>El riesgo no compensa la ganancia esperada.</li></ul>;
+                }
+                if (type === 'beta') {
+                    const v = parseFloat(value);
+                    if (v >= 1.5) return <ul className="mt-3 text-[10px] text-slate-400 list-disc pl-3 space-y-1"><li><span className="text-amber-500 font-bold">Agresivo:</span> Alta divergencia.</li><li>Amplifica movimientos de BTC. Ganancias rápidas.</li></ul>;
+                    if (v >= 1) return <ul className="mt-3 text-[10px] text-slate-400 list-disc pl-3 space-y-1"><li><span className="text-blue-400 font-bold">Moderado:</span> Sincronizado.</li><li>Fluye a la par del mercado general (Beta 1).</li></ul>;
+                    return <ul className="mt-3 text-[10px] text-slate-400 list-disc pl-3 space-y-1"><li><span className="text-slate-300 font-bold">Defensivo:</span> Baja volatilidad.</li><li>Útil como cobertura ante caídas macro.</li></ul>;
+                }
+                if (type === 'whales') {
+                    if (value.includes('+')) return <ul className="mt-3 text-[10px] text-slate-400 list-disc pl-3 space-y-1"><li><span className="text-green-400 font-bold">Alcista:</span> Acumulación fuerte.</li><li>Carteras institucionales comprando activamente.</li></ul>;
+                    return <ul className="mt-3 text-[10px] text-slate-400 list-disc pl-3 space-y-1"><li><span className="text-red-400 font-bold">Bajista:</span> Distribución masiva.</li><li>Salida detectada de Smart Money.</li></ul>;
+                }
+                if (type === 'rr') {
+                    return <ul className="mt-3 text-[10px] text-slate-400 list-disc pl-3 space-y-1"><li><span className="text-green-400 font-bold">Óptimo:</span> Asimetría positiva.</li><li>La ganancia potencial triplica el riesgo de pérdida.</li></ul>;
+                }
+            };
+
             const handleAuth = async (e) => {
                 e.preventDefault();
                 setAuthError('');
@@ -301,7 +324,7 @@
                                 <span className="text-amber-500 text-4xl lg:text-5xl animate-pulse drop-shadow-[0_0_15px_rgba(245,158,11,0.4)]">⬢</span>
                                 <div>
                                     <h1 className="text-2xl lg:text-3xl font-black font-mono tracking-tighter text-white uppercase leading-none">Q.A100X Terminal</h1>
-                                    <h2 className="text-sm lg:text-base font-bold font-mono text-slate-400 uppercase mt-1">Analizamos el top 100 de Criptomonedas con todo el potencial de la Inteligencia Artificial.</h2>
+                                    <h2 className="text-sm lg:text-base font-bold font-mono text-slate-400 uppercase mt-1">El Top 100 de Criptomonedas analizado con todo el potencial de la IA.</h2>
                                 </div>
                             </div>
                             <p className="text-sm lg:text-base text-slate-300 font-medium tracking-wide max-w-3xl mt-3 mb-4 text-center lg:text-left">
@@ -317,6 +340,8 @@
                                     </div>
                                 </div>
                                 <div className="flex flex-wrap justify-center lg:justify-start gap-3 xl:border-l xl:border-slate-800 xl:pl-4">
+                                    <div className="flex flex-col items-center xl:items-start"><span className="text-[9px] text-slate-500 font-black font-mono tracking-widest">CAP. MERCADO GLOBAL</span><span className="text-sm text-white font-black font-mono tracking-tight">$2.48 Trillones</span></div>
+                                    <div className="hidden md:block w-px h-8 bg-slate-800 mx-1"></div>
                                     <div className="flex flex-col items-center xl:items-start"><span className="text-[9px] text-slate-500 font-black font-mono tracking-widest">FEAR & GREED INDEX</span><span className="text-sm text-green-400 font-black font-mono tracking-tight">72 (Codicia)</span></div>
                                     <div className="hidden md:block w-px h-8 bg-slate-800 mx-1"></div>
                                     <div className="flex flex-col items-center xl:items-start"><span className="text-[9px] text-slate-500 font-black font-mono tracking-widest">DOMINANCIA BTC</span><span className="text-sm text-amber-500 font-black font-mono tracking-tight">54.8%</span></div>
@@ -451,6 +476,7 @@
                                                         <p className="text-[10px] text-slate-500 font-bold mb-1 uppercase">{m === 'rr' ? 'Riesgo/Recompensa' : m + ' Ratio'}</p>
                                                         <p className="text-xl font-black text-white font-mono">{m === 'whales' ? (selectedAsset?.advMetrics?.whales || 'N/A') : (selectedAsset?.advMetrics?.[m] || 'N/A')}</p>
                                                     </div>
+                                                    {renderMetricExplanation(m, selectedAsset?.advMetrics?.[m])}
                                                 </div>
                                             ))}
                                         </div>
@@ -463,6 +489,7 @@
                                         <div className="absolute inset-0 z-20 backdrop-blur-md bg-[#020617]/70 flex flex-col items-center justify-center border-2 border-amber-500/50 rounded-xl p-6 text-center">
                                             <span className="text-6xl mb-4 drop-shadow-[0_0_15px_rgba(245,158,11,0.5)]">💎</span>
                                             <h3 className="text-3xl font-black text-white mb-3 uppercase tracking-tighter">Inteligencia Gráfica Institucional</h3>
+                                            <p className="text-slate-300 text-base max-w-lg mb-8 leading-relaxed">Nuestros algoritmos ya calcularon los precios objetivo a corto y largo plazo, además del análisis de "Fuerza Relativa" comparando este activo contra BTC y el S&P 500.</p>
                                             <button onClick={() => setShowVipModal(true)} className="bg-gradient-to-r from-amber-500 to-orange-500 text-black px-8 py-4 rounded-xl font-black uppercase tracking-widest text-lg shadow-[0_0_30px_rgba(245,158,11,0.4)]">Desbloquear Proyecciones VIP</button>
                                         </div>
                                     )}
@@ -480,13 +507,21 @@
                                                     <div key={t} className="bg-[#020617] p-6 rounded-xl border border-slate-800">
                                                         <h3 className="text-xs font-black text-slate-500 mb-2 uppercase">OBJETIVO {t} plazo</h3>
                                                         <p className="text-2xl font-black font-mono mb-3 text-amber-400">{formatPrice(currentPrice && selectedAsset?.projMuls ? currentPrice * selectedAsset.projMuls[idx] : null)}</p>
+                                                        <p className="text-sm font-medium text-slate-300">{selectedAsset?.projections?.[t] || 'Calculando...'}</p>
                                                     </div>
                                                 ))}
                                             </div>
                                         </div>
                                         <div className="bg-[#0B1120] border border-slate-800 rounded-xl p-6 lg:p-8">
-                                            <div className="mb-6"><h2 className="text-sm font-black uppercase text-slate-400 tracking-widest mb-2">📈 Rendimiento Institucional (30 Días)</h2></div>
+                                            <div className="mb-6"><h2 className="text-sm font-black uppercase text-slate-400 tracking-widest mb-2">📈 Rendimiento Institucional (30 Días)</h2><p className="text-sm text-slate-500">Comparativa de fuerza relativa contra el mercado cripto general y la bolsa de valores tradicional.</p></div>
                                             <div className="chart-container bg-[#020617] border border-slate-800/50 rounded-xl overflow-hidden p-2"><canvas ref={compChartRef}></canvas></div>
+                                            <div className="mt-6 bg-[#020617] border border-slate-800 p-5 rounded-xl">
+                                                <h4 className="text-xs font-black text-amber-500 mb-3 uppercase tracking-widest">💡 Análisis algorítmico de la gráfica</h4>
+                                                <ul className="text-sm text-slate-300 space-y-3 list-disc pl-4 marker:text-amber-500">
+                                                    <li><span className="text-white font-bold">Correlación Base:</span> La línea de <b>{selectedAsset?.symbol || 'Activo'}</b> ilustra su momento de fuerza relativa tomando como ancla el rendimiento de Bitcoin.</li>
+                                                    <li><span className="text-white font-bold">Comportamiento:</span> Al ser catalogado en la zona {(selectedAsset?.list || '') === 'alpha' ? <span className="text-green-400 font-bold">Alpha (Long)</span> : <span className="text-red-400 font-bold">Omega (Short)</span>} con Beta de {selectedAsset?.advMetrics?.beta || '1'}, la gráfica confirma {(selectedAsset?.list || '') === 'alpha' ? "una divergencia positiva que demuestra entrada constante de flujo institucional sobre el promedio." : "debilidad estructural con salidas de liquidez frente al mercado global."}</li>
+                                                </ul>
+                                            </div>
                                         </div>
                                     </div>
                                 </section>
@@ -500,7 +535,11 @@
                             <div className="bg-[#0B1120] border border-slate-700 w-full max-w-sm rounded-3xl p-8 relative">
                                 <button onClick={() => setShowProfileModal(false)} className="absolute top-5 right-5 text-slate-500 text-xl">✕</button>
                                 <div className="text-center mb-6">
+                                    <div className="w-20 h-20 bg-slate-800 rounded-full mx-auto mb-4 flex items-center justify-center text-3xl border border-slate-700">👤</div>
                                     <h2 className="text-xl font-black text-white">{user.displayName || "Usuario QA100X"}</h2><p className="text-slate-400 text-sm font-mono mt-1">{user.email}</p>
+                                </div>
+                                <div className="bg-[#020617] p-4 rounded-xl border border-slate-800 mb-6">
+                                    <p className="text-xs text-slate-500 font-bold mb-1">NIVEL DE CUENTA</p><p className={`font-black ${currentTier === 3 ? 'text-amber-500' : 'text-emerald-400'}`}>{currentTier === 3 ? '💎 VIP Premium' : '🔓 Freemium Básico'}</p>
                                 </div>
                                 <div className="space-y-3">
                                     <button onClick={() => window.open(CUSTOMER_PORTAL, '_blank')} className="w-full bg-slate-800 text-white font-bold py-3 rounded-xl border border-slate-600 flex items-center justify-center hover:bg-slate-700 transition-colors">💳 Cancelar o Modificar Suscripción</button>
